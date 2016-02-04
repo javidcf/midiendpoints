@@ -7,6 +7,9 @@
 
 include(LibFindMacros)
 
+# Dependencies
+libfind_package(RtMidi Jack 0.1)
+
 # Use pkg-config to get hints about paths
 libfind_pkg_check_modules(RtMidi_PKGCONF rtmidi)
 
@@ -22,8 +25,4 @@ find_library(RtMidi_LIBRARY
   PATHS ${RtMidi_PKGCONF_LIBRARY_DIRS}
 )
 
-# Set the include dir variables and the libraries and let libfind_process do the rest.
-# NOTE: Singular variables for this library, plural for libraries this this lib depends on.
-set(RtMidi_PROCESS_INCLUDES RtMidi_INCLUDE_DIR)
-set(RtMidi_PROCESS_LIBS RtMidi_LIBRARY)
 libfind_process(RtMidi)

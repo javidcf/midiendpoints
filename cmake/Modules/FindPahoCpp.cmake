@@ -8,7 +8,7 @@
 include(LibFindMacros)
 
 # Dependencies
-libfind_package(PahoCpp Paho)
+libfind_package(PahoCpp Paho 1.3.0)
 
 # Use pkg-config to get hints about paths
 libfind_pkg_check_modules(PahoCpp_PKGCONF PahoCpp)
@@ -25,8 +25,4 @@ find_library(PahoCpp_LIBRARY
   PATHS ${PahoCpp_PKGCONF_LIBRARY_DIRS}
 )
 
-# Set the include dir variables and the libraries and let libfind_process do the rest.
-# NOTE: Singular variables for this library, plural for libraries this this lib depends on.
-set(PahoCpp_PROCESS_INCLUDES PahoCpp_INCLUDE_DIR)
-set(PahoCpp_PROCESS_LIBS PahoCpp_LIBRARY)
 libfind_process(PahoCpp)

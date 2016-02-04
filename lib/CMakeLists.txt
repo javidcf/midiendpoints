@@ -1,18 +1,13 @@
 
-include (ExternalProject)
-
-# dependencies
-
-find_package (RtMidi REQUIRED)
-
-find_package (Paho REQUIRED)
-
-find_package (PahoCpp REQUIRED)
-
-
 # Bootstrap dependencies!
+# Still not working
 
-# # Still not complete
+# include (ExternalProject)
+#
+#
+# # RtMidi
+# find_package (RtMidi ${RTMIDI_VERSION} OPTIONAL)
+#
 # if (NOT RtMidi_FOUND)
 #   set (RtMidi_INSTALL_DIR ${CMAKE_BINARY_DIR}/RtMidi)
 #   file (MAKE_DIRECTORY

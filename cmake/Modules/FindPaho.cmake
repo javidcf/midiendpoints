@@ -26,8 +26,4 @@ find_library(Paho_LIBRARY
   PATHS ${Paho_PKGCONF_LIBRARY_DIRS}
 )
 
-# Set the include dir variables and the libraries and let libfind_process do the rest.
-# NOTE: Singular variables for this library, plural for libraries this this lib depends on.
-set(Paho_PROCESS_INCLUDES Paho_INCLUDE_DIR)
-set(Paho_PROCESS_LIBS Paho_LIBRARY)
 libfind_process(Paho)

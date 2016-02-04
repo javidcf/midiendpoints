@@ -1,9 +1,0 @@
-[submodule "lib/paho"]
-	path = lib/paho
-	url = https://git.eclipse.org/r/paho/org.eclipse.paho.mqtt.c
-[submodule "lib/paho-cpp"]
-	path = lib/paho-cpp
-	url = https://git.eclipse.org/r/paho/org.eclipse.paho.mqtt.cpp
-[submodule "lib/rtmidi"]
-	path = lib/rtmidi
-	url = https://github.com/thestk/rtmidi.git

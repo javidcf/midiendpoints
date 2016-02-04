@@ -19,10 +19,10 @@ find_path(Paho_INCLUDE_DIR
 # Finally the library itself
 find_library(Paho_LIBRARY
   # which one of these??
-  NAMES mqttv3a  # asynchronous
-  #NAMES mqttv3as  # asynchronous + SLL
-  #NAMES mqttv3c  # classic/synchronous
-  #NAMES mqttv3cs  # classic/synchronous + SSL
+  NAMES paho-mqtt3a  # asynchronous
+  #NAMES paho-mqtt3as  # asynchronous + SLL
+  #NAMES paho-mqtt3c  # classic/synchronous
+  #NAMES paho-mqtt3cs  # classic/synchronous + SSL
   PATHS ${Paho_PKGCONF_LIBRARY_DIRS}
 )
 

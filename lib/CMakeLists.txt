@@ -1,41 +1,38 @@
 
 include (ExternalProject)
 
-# librtmidi
+# dependencies
 
-# find_package (RtMidi QUIET)
+find_package (RtMidi REQUIRED)
 
-if (NOT RtMidi_FOUND)
-  ExternalProject_Add(
-    RtMidi
-    GIT_REPOSITORY https://github.com/thestk/rtmidi.git
-    GIT_TAG 2.1.0
-    CONFIGURE_COMMAND autoconf && ./configure --with-alsa --with-jack  # Linux only
-    BUILD_COMMAND make
-    BUILD_IN_SOURCE 1
-  )
-else ()
-  add_custom_target (RtMidi)
-endif ()
+find_package (Paho REQUIRED)
 
-# Paho
+find_package (PahoCpp REQUIRED)
 
-# find_package (Paho QUIET)
-#
-# if (NOT Paho_FOUND)
-#   find_package (OpenSSL REQUIRED)
-#   ExternalProject_Add(
-#     Paho
-#     GIT_REPOSITORY https://git.eclipse.org/r/paho/org.eclipse.paho.mqtt.c
-#     GIT_TAG v1.0.3
-#     BUILD_COMMAND make
-#     BUILD_IN_SOURCE 1
+
+# Bootstrap dependencies!
+
+# # Still not complete
+# if (NOT RtMidi_FOUND)
+#   set (RtMidi_INSTALL_DIR ${CMAKE_BINARY_DIR}/RtMidi)
+#   file (MAKE_DIRECTORY
+#     ${RtMidi_INSTALL_DIR}/lib
+#     ${RtMidi_INSTALL_DIR}/pkgconfig
+#     ${RtMidi_INSTALL_DIR}/include
+#     ${RtMidi_INSTALL_DIR}/bin
 #   )
+#   find_package (Git)
+#   ExternalProject_Add (
+#     RtMidi
+#     GIT_REPOSITORY https://github.com/thestk/rtmidi.git
+#     GIT_TAG 2.1.0
+#     # Linux only for now
+#     CONFIGURE_COMMAND autoconf && ./configure --with-alsa --with-jack --prefix=${CMAKE_INSTALL_PREFIX}
+#     #BUILD_COMMAND make
+#     BUILD_IN_SOURCE 1
+#     INSTALL_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi_2.1.0.install ${RtMidi_INSTALL_DIR}
+#   )
+#   # TODO set vars
 # else ()
-#   add_custom_target (Paho)
+#   add_custom_target (RtMidi)
 # endif ()
-
-
-# Paho-Cpp
-
-#find_package (PahoCpp QUIET)

@@ -10,13 +10,11 @@ include(LibFindMacros)
 # Use pkg-config to get hints about paths
 libfind_pkg_check_modules(Json_PKGCONF Json)
 
-# Retrieved library path
-set(Json_RETRIEVED ${CMAKE_BINARY_DIR}/lib/json)
-
 # Include dir
 find_path(Json_INCLUDE_DIR
   NAMES json.hpp
-  PATHS ${Json_PKGCONF_INCLUDE_DIRS} ${Json_RETRIEVED}/include
+  # Should prioritize repo version?
+  PATHS ${Json_PKGCONF_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/lib/json/include
 )
 
 # No libraries needed

@@ -52,6 +52,10 @@ function (libfind_pkg_detect PREFIX)
   if (libraryargs)
     find_library(${PREFIX}_LIBRARY NAMES ${libraryargs} HINTS ${${PREFIX}_PKGCONF_LIBRARY_DIRS})
   endif()
+  # Read pkg-config version
+  if (${PREFIX}_PKGCONF_VERSION)
+    set (${PREFIX}_VERSION ${${PREFIX}_PKGCONF_VERSION} PARENT_SCOPE)
+  endif ()
 endfunction()
 
 # Extracts a version #define from a version.h file, output stored to <PREFIX>_VERSION.
@@ -123,7 +127,7 @@ function (libfind_process PREFIX)
   set(includeopts ${${PREFIX}_PROCESS_INCLUDES})
   set(libraryopts ${${PREFIX}_PROCESS_LIBS})
 
-  # Process deps to add to 
+  # Process deps to add to
   foreach (i ${PREFIX} ${${PREFIX}_DEPENDENCIES})
     if (DEFINED ${i}_INCLUDE_OPTS OR DEFINED ${i}_LIBRARY_OPTS)
       # The package seems to export option lists that we can use, woohoo!
@@ -146,11 +150,11 @@ function (libfind_process PREFIX)
       endif()
     endif()
   endforeach()
-  
+
   if (includeopts)
     list(REMOVE_DUPLICATES includeopts)
   endif()
-  
+
   if (libraryopts)
     list(REMOVE_DUPLICATES libraryopts)
   endif()
@@ -215,7 +219,7 @@ function (libfind_process PREFIX)
       set (${PREFIX}_LIBRARIES ${libs} PARENT_SCOPE)
       set (${PREFIX}_FOUND TRUE PARENT_SCOPE)
     endif()
-    return()    
+    return()
   endif()
 
   # Format messages for debug info and the type of error
@@ -263,4 +267,3 @@ function (libfind_process PREFIX)
     message(WARNING "WARNING: MISSING PACKAGE\n${msg} This package is NOT REQUIRED and you may ignore this warning but by doing so you may miss some functionality of ${CMAKE_PROJECT_NAME}. \n${vars}")
   endif()
 endfunction()
-

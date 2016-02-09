@@ -8,21 +8,10 @@
 include(LibFindMacros)
 
 # Dependencies
-libfind_package(RtMidi Jack 0.1)
+libfind_package(RtMidi Jack)  # version?
 
-# Use pkg-config to get hints about paths
-libfind_pkg_check_modules(RtMidi_PKGCONF rtmidi)
+libfind_pkg_detect(RtMidi rtmidi FIND_PATH RtMidi.h FIND_LIBRARY rtmidi)
 
-# Include dir
-find_path(RtMidi_INCLUDE_DIR
-  NAMES RtMidi.h
-  PATHS ${RtMidi_PKGCONF_INCLUDE_DIRS}
-)
-
-# Finally the library itself
-find_library(RtMidi_LIBRARY
-  NAMES rtmidi
-  PATHS ${RtMidi_PKGCONF_LIBRARY_DIRS}
-)
+# TODO: fix non found version?
 
 libfind_process(RtMidi)

@@ -8,7 +8,7 @@
 include(LibFindMacros)
 
 # Dependencies
-libfind_package(PahoCpp Paho 1.3.0)
+libfind_package(PahoCpp Paho)  # version?
 
 # Use pkg-config to get hints about paths
 libfind_pkg_check_modules(PahoCpp_PKGCONF PahoCpp)
@@ -24,5 +24,12 @@ find_library(PahoCpp_LIBRARY
   NAMES mqttpp
   PATHS ${PahoCpp_PKGCONF_LIBRARY_DIRS}
 )
+
+if (PahoCpp_PKGCONF_VERSION)
+  set(PahoCpp_VERSION PahoCpp_PKGCONF_VERSION)
+else()
+  # TODO: find proper version string
+  set(PahoCpp_VERSION 0.1)
+endif()
 
 libfind_process(PahoCpp)

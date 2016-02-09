@@ -1,0 +1,8 @@
+{
+  "execPath": "/usr/bin/g++",
+  "gccDefaultCFlags": "-c -Wall -fsyntax-only",
+  "gccDefaultCppFlags": "-c -Wall -std=c++11 -fsyntax-only",
+  "gccErrorLimit": 15,
+  "gccIncludePaths": "./midilistener/include,./midiemitter/include",
+  "gccSuppressWarnings": false
+}

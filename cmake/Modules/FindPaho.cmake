@@ -26,4 +26,11 @@ find_library(Paho_LIBRARY
   PATHS ${Paho_PKGCONF_LIBRARY_DIRS}
 )
 
+if (Paho_PKGCONF_VERSION)
+  set(Paho_VERSION Paho_PKGCONF_VERSION)
+else()
+  # TODO: find proper version string
+  set(Paho_VERSION 1.0.3)
+endif()
+
 libfind_process(Paho)

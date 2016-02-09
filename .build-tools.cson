@@ -1,0 +1,67 @@
+providers: [
+  {
+    key: "bt"
+    config:
+      commands: [
+        {
+          project: "/home/jdehesa/Documents/project/midiendpoints"
+          source: "/home/jdehesa/Documents/project/midiendpoints/.build-tools.cson"
+          name: "CMake"
+          command: "cmake .."
+          wd: "./build"
+          env: {}
+          modifier: {}
+          stdout:
+            pty: false
+            highlighting: "nh"
+            ansi_option: "ignore"
+          stderr:
+            highlighting: "nh"
+            ansi_option: "ignore"
+          output:
+            console:
+              close_success: true
+              queue_in_buffer: true
+              stdin: false
+            file:
+              path: "./build/build.log"
+              queue_in_file: true
+          version: 1
+        }
+        {
+          project: "/home/jdehesa/Documents/project/midiendpoints"
+          source: "/home/jdehesa/Documents/project/midiendpoints/.build-tools.cson"
+          name: "Make"
+          command: "make"
+          wd: "./build"
+          env: {}
+          modifier:
+            dependency:
+              list: [
+                [
+                  "0"
+                  "0"
+                  "CMake"
+                ]
+              ]
+              abort: true
+          stdout:
+            pty: false
+            highlighting: "nh"
+            ansi_option: "ignore"
+          stderr:
+            highlighting: "nh"
+            ansi_option: "ignore"
+          output:
+            console:
+              close_success: true
+              queue_in_buffer: true
+              stdin: false
+            file:
+              path: "./build/build.log"
+              queue_in_file: true
+          version: 1
+        }
+      ]
+  }
+]

@@ -1,6 +1,12 @@
 
-set (MIDIEMITTER_SRC midiemitter.cpp)
+set (MIDIEMITTER_SRC
+  src/midiemitter.cpp
+)
 add_executable (midiemitter ${MIDIEMITTER_SRC})
+
+# C++11
+set_property(TARGET midiemitter PROPERTY CXX_STANDARD 11)
+set_property(TARGET midiemitter PROPERTY CXX_STANDARD_REQUIRED 1)
 
 # Dependencies
 find_package (RtMidi ${RTMIDI_VERSION} REQUIRED)

@@ -9,6 +9,9 @@ include(LibFindMacros)
 
 libfind_pkg_detect(Jack jack FIND_PATH jack/jack.h FIND_LIBRARY jack)
 
-# TODO: fix non found version?
+if (NOT Jack_VERSION)
+  # TODO: find proper version string
+  # set(Jack_VERSION 1.9.10)
+endif()
 
 libfind_process(Jack)

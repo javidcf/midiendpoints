@@ -24,7 +24,7 @@ if (Json_PKGCONF_VERSION)
   set(Json_VERSION PahoCpp_PKGCONF_VERSION)
 else()
   # TODO: find proper version string
-  set(Json_VERSION 2.0.0)
+  #set(Json_VERSION 2.0.0)
 endif()
 
 libfind_process(Json)

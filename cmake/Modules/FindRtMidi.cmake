@@ -12,6 +12,9 @@ libfind_package(RtMidi Jack)  # version?
 
 libfind_pkg_detect(RtMidi rtmidi FIND_PATH RtMidi.h FIND_LIBRARY rtmidi)
 
-# TODO: fix non found version?
+if (NOT RtMidi_VERSION)
+  # TODO: find proper version string
+  # set(RtMidi_VERSION 2.1.0)
+endif()
 
 libfind_process(RtMidi)

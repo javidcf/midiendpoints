@@ -7,30 +7,12 @@
 
 include(LibFindMacros)
 
-# Use pkg-config to get hints about paths
-libfind_pkg_check_modules(Paho_PKGCONF Paho)
+# Which one? paho-mqtt3a / paho-mqtt3as / paho-mqtt3c / paho-mqtt3cs
+libfind_pkg_detect(Paho paho FIND_PATH MQTTClient.h FIND_LIBRARY paho-mqtt3a)
 
-# Include dir
-find_path(Paho_INCLUDE_DIR
-  NAMES MQTTClient.h   # This should be enough right?
-  PATHS ${Paho_PKGCONF_INCLUDE_DIRS}
-)
-
-# Finally the library itself
-find_library(Paho_LIBRARY
-  # which one of these??
-  NAMES paho-mqtt3a  # asynchronous
-  #NAMES paho-mqtt3as  # asynchronous + SLL
-  #NAMES paho-mqtt3c  # classic/synchronous
-  #NAMES paho-mqtt3cs  # classic/synchronous + SSL
-  PATHS ${Paho_PKGCONF_LIBRARY_DIRS}
-)
-
-if (Paho_PKGCONF_VERSION)
-  set(Paho_VERSION Paho_PKGCONF_VERSION)
-else()
+if (NOT Paho_VERSION)
   # TODO: find proper version string
-  set(Paho_VERSION 1.0.3)
+  # set(Paho_VERSION 1.0.3)
 endif()
 
 libfind_process(Paho)

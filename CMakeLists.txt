@@ -19,12 +19,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${warnings}")
 #set (PAHOCPP_VERSION 0.1)
 #set (JSON_VERSION 2.0.0)
 #set (B64_VERSION 1.2)
+#set (Log4cxx_VERSION 0.10.0)
 find_package (RtMidi ${RTMIDI_VERSION} REQUIRED)
 find_package (PahoCpp ${PAHOCPP_VERSION} REQUIRED)
 find_package (Json ${JSON_VERSION} REQUIRED)
 find_package (B64 ${B64_VERSION} REQUIRED)
+find_package (Log4cxx ${Log4cxx_VERSION} REQUIRED)
 
 # add_subdirectory (lib)
+
+set(Common_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/common/include")
 
 add_subdirectory (midilistener)
 add_subdirectory (midiemitter)

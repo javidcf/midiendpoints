@@ -9,30 +9,35 @@
 #include <fstream>
 #include <stdexcept>
 #include <streambuf>
+#include <string>
+
+#ifndef NDEBUG
+#define DEBUG 1
+#endif
 
 namespace midiendpoints
 {
 
 //! Logger configuration file path
-const char * const LOGGER_CONF_PATH = "/etc/midiendpoints/logging.conf";
+const std::string LOGGER_CONF_PATH{"/etc/midiendpoints/logging.conf"};
 
 //! RtMidi API
 const RtMidi::Api MIDI_API = RtMidi::UNIX_JACK;  // TODO tweak this
 
 //! MQTT quality of service
-const int MQTT_QOS = 1;
+const int MQTT_QOS = 1;  // TODO tune this
 //! MQTT retain policy
 const bool MQTT_RETAIN = false;
 
 //! BSF JSON message begin mark
-const char * const BSF_JSON_BEGIN = "<JSON>";
+const std::string BSF_JSON_BEGIN{"<JSON>"};
 //! BSF JSON message end mark
-const char * const BSF_JSON_END = "</JSON>";
+const std::string BSF_JSON_END{"</JSON>"};
 
 //! JSON timestamp field
-const char * const JSON_TIMESTAMP = "at";
+const std::string JSON_TIMESTAMP{"at"};
 //! JSON event data field
-const char * const JSON_EVENT_DATA = "data";
+const std::string JSON_EVENT_DATA{"data"};
 
 //!
 //! \brief An exception in a MIDI endpoint.
@@ -49,10 +54,29 @@ public:
 template<class CharT, class TraitsT = std::char_traits< CharT > >
 struct membuf : std::streambuf
 {
+    //!
+    //! Constructor.
+    //!
+    //! \param begin Beginning of the memory buffer
+    //! \param end End of the memory buffer
+    //!
     membuf(CharT * begin, CharT * end) {
         this->setg(begin, begin, end);
     }
 };
+
+//!
+//! \brief Create a memory buffer.
+//!
+//! \param begin Beginning of the memory buffer
+//! \param end End of the memory buffer
+//! \return A memory buffer for the given segment of memory.
+//!
+template<class CharT, class TraitsT = std::char_traits< CharT > >
+membuf<CharT, TraitsT> make_membuf(CharT * begin, CharT * end)
+{
+    return membuf<CharT, TraitsT>(begin, end);
+}
 
 //!
 //! \brief Configure logging service.
@@ -71,6 +95,11 @@ inline void configureLogging()
     {
         log4cxx::BasicConfigurator::configure();
     }
+    #if DEBUG
+    log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getDebug());
+    #else
+    log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
+    #endif
 }
 
 }

@@ -28,9 +28,9 @@
 *.app
 
 # Build directories
-build/
+build*/
 bin/
 
-# Configuration files
-.build-tools.cson
-.gcc-flags.json
+# Sublime Text workspace
+*.sublime-workspace
+

@@ -1,6 +1,7 @@
 
 set (MIDIEMITTER_SRC
   src/midiemitter.cpp
+  src/MidiMqttPlayer.cpp
 )
 add_executable (midiemitter ${MIDIEMITTER_SRC})
 include_directories (include ${Common_INCLUDE_DIRS})

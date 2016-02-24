@@ -3,13 +3,15 @@
 #define MIDIMQTTRETRANMITTER_H
 
 #include <b64/encode.h>
-#include <mqtt/async_client.h>
+#include <mqtt/callback.h>
+#include <mqtt/client.h>
+#include <mqtt/delivery_token.h>
 #include <mqtt/message.h>
-#include <mqtt/topic.h>
 #include <RtMidi.h>
 
+#include <string>
 #include <sstream>
-#include <streambuf>
+#include <vector>
 
 namespace midiendpoints
 {
@@ -19,21 +21,24 @@ namespace midiendpoints
 //!
 //! MIDI messages are received through a Jack MIDI port and retransmitted into a
 //! MQTT topic as a BSF-compliant JSON message.
-class MidiMqttRetransmitter
+//!
+class MidiMqttRetransmitter : private mqtt::callback
 {
 
-public:
-    MidiMqttRetransmitter(const MidiMqttRetransmitter&) =delete;
-    MidiMqttRetransmitter& operator=(const MidiMqttRetransmitter&) =delete;
+  public:
+    MidiMqttRetransmitter(const MidiMqttRetransmitter &) = delete;
+    MidiMqttRetransmitter &operator=(const MidiMqttRetransmitter &) = delete;
+
+    //! MIDI client name
+    static const std::string MIDI_CLIENT_NAME;
 
     //!
     //! \brief Constructor.
     //!
-    //! \todo Should this be const?
-    //!
     //! \param mqttServerUri URI of the MQTT server
-    //! \param mqttClientId MQTT client identifier used to publish the messages
-    //! \param mqttTopic Topic of the MQTT queue where messages are published
+    //! \param mqttClientId MQTT client identifier used to publish the messagesddd
+    //! \param mqttTopic Topic of the MQTT topic where messages are published
+    //!
     MidiMqttRetransmitter(const std::string &mqttServerUri,
                           const std::string &mqttClientId,
                           const std::string &mqttTopic);
@@ -49,12 +54,13 @@ public:
     //! \brief Stop the retransmitter.
     //!
     //! Closes any open MIDI port and MQTT connection.
+    //!
     void stop();
 
     //!
     //! \brief Destructor.
     //!
-    ~MidiMqttRetransmitter();
+    virtual ~MidiMqttRetransmitter();
 
     //!
     //! \brief Callback for new MIDI events.
@@ -62,26 +68,33 @@ public:
     //! \param timeStamp time stamp of the MIDI event
     //! \param message MIDI event data
     //! \param userData user data given in the callback binding
+    //!
     void midiEventReceived(double timeStamp,
-                           std::vector< unsigned char > * message,
-                           void * userData);
+                           std::vector<unsigned char> *message, void *userData);
 
-private:
+  private:
     //! MIDI input
     RtMidiIn m_midiIn;
     //! MQTT client
-    mqtt::async_client m_mqtt;
+    mqtt::client m_mqtt;
     //! MQTT topic
-    mqtt::topic m_mqttTopic;
-    //! B64 encoder
+    std::string m_mqttTopic;
+    //! Base64 encoder
     base64::encoder m_b64Encoder;
     //! String stream for message data
-    std::stringstream m_message;
-    // Whether the retransmitter has been started
+    std::ostringstream m_message;
+    //! Whether the retransmitter has been started
     bool m_started;
 
-};
+    //! MQTT callback for lost connection
+    virtual void connection_lost(const std::string & cause);
 
+    //! MQTT callback for new messages
+    virtual void message_arrived(const std::string & topic, mqtt::message::ptr_t message);
+
+    //! MQTT callback for completed deliveries
+    virtual void delivery_complete(mqtt::idelivery_token::ptr_t token);
+};
 }
 
 #endif

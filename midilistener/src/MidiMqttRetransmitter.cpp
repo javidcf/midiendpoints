@@ -9,7 +9,10 @@
 namespace midiendpoints
 {
 
-static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("MidiMqttRetransmitter"));
+static log4cxx::LoggerPtr
+    logger(log4cxx::Logger::getLogger("MidiMqttRetransmitter"));
+
+const std::string MidiMqttRetransmitter::MIDI_CLIENT_NAME{"midilistener"};
 
 //!
 //! \brief Forward a MIDI event callback to a MidiMqttRetransmitter object.
@@ -20,20 +23,21 @@ static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("MidiMqttRetransmitt
 //! \param timeStamp time stamp of the MIDI event
 //! \param message MIDI event data
 //! \param userData a valid pointer to a MidiMqttRetransmitter
-void forwardMidiMqttRetransmitterEventCallback(double timeStamp,
-                                               std::vector< unsigned char > *message,
-                                               void * userData);
+//!
+void forwardMidiMqttRetransmitterEventCallback(
+    double timeStamp, std::vector<unsigned char> *message, void *userData);
 
 MidiMqttRetransmitter::MidiMqttRetransmitter(const std::string &mqttServerUri,
                                              const std::string &mqttClientId,
                                              const std::string &mqttTopic)
-: m_midiIn(MIDI_API)
+: m_midiIn(MIDI_API, MIDI_CLIENT_NAME)
 , m_mqtt(mqttServerUri, mqttClientId)
-, m_mqttTopic(mqttTopic, m_mqtt)
+, m_mqttTopic(mqttTopic)
 , m_b64Encoder()
 , m_message()
 , m_started{false}
 {
+    m_mqtt.set_callback(*this);
 }
 
 MidiMqttRetransmitter::~MidiMqttRetransmitter()
@@ -55,7 +59,7 @@ void MidiMqttRetransmitter::start()
         m_mqtt.connect();
 
         // MIDI input
-        m_midiIn.openPort(0);
+        m_midiIn.openPort(0, "midi_in");
         m_midiIn.setCallback(forwardMidiMqttRetransmitterEventCallback, this);
         // midiin->ignoreTypes( false, false, false );
 
@@ -74,16 +78,20 @@ void MidiMqttRetransmitter::stop()
     {
         m_midiIn.cancelCallback();
         m_midiIn.closePort();
-        m_mqtt.disconnect();
+        if (m_mqtt.is_connected())
+        {
+            m_mqtt.disconnect();
+        }
         m_started = false;
     }
 }
 
-void MidiMqttRetransmitter::midiEventReceived(double timeStamp,
-                                              std::vector< unsigned char > * message,
-                                              void * /*userData*/)
+void MidiMqttRetransmitter::midiEventReceived(
+    double timeStamp, std::vector<unsigned char> *message, void * /*userData*/)
 {
-    LOG4CXX_DEBUG(logger, "MIDI event received at " << timeStamp << " (" << message->size() << " bytes)")
+    LOG4CXX_DEBUG(logger, "MIDI event received at " << timeStamp << " ("
+                                                    << message->size()
+                                                    << " bytes)")
 
     if (message->size() > 0)
     {
@@ -94,8 +102,8 @@ void MidiMqttRetransmitter::midiEventReceived(double timeStamp,
                   << "\"" << JSON_TIMESTAMP << "\":" << timeStamp << ","
                   << "\"" << JSON_EVENT_DATA << "\":\"";
         // Encode MIDI event in B64
-        char * data = reinterpret_cast<char *>(message->data());
-        membuf<char> dataBuf(data, data + message->size());
+        auto data = reinterpret_cast<char *>(message->data());
+        auto dataBuf = make_membuf(data, data + message->size());
         std::istream dataStream(&dataBuf);
         m_b64Encoder.encode(dataStream, m_message);
         // Remove trailing newline from base64 encoder
@@ -103,23 +111,45 @@ void MidiMqttRetransmitter::midiEventReceived(double timeStamp,
         // Finish message
         m_message << "\"}" << BSF_JSON_END;
 
-        m_mqttTopic.publish(m_message.str(), MQTT_QOS, MQTT_RETAIN);
+        auto payload = m_message.str();
+        m_mqtt.publish(m_mqttTopic, payload.c_str(), payload.size(), MQTT_QOS,
+                       MQTT_RETAIN);
     }
 }
 
-void forwardMidiMqttRetransmitterEventCallback(double timeStamp,
-                                               std::vector< unsigned char > * message,
-                                               void * userData)
+void MidiMqttRetransmitter::message_arrived(const std::string &topic,
+                                     mqtt::message::ptr_t /*message*/)
 {
-   auto retransmitter = static_cast<MidiMqttRetransmitter *>(userData);
-   if (retransmitter)
-   {
-       retransmitter->midiEventReceived(timeStamp, message, userData);
-   }
-   else
-   {
-       LOG4CXX_ERROR(logger, "Invalid pointer in MIDI event callback")
-   }
+    LOG4CXX_ERROR(logger, "Unexpected MQWTT message received on topic '" << topic << "'")
 }
 
+void MidiMqttRetransmitter::connection_lost(const std::string & /*cause*/)
+{
+    // TODO handle error? raise exception?
+    LOG4CXX_ERROR(logger, "MQTT connection lost")
+}
+
+void MidiMqttRetransmitter::delivery_complete(mqtt::idelivery_token::ptr_t token)
+{
+    if (token && token->get_message())
+    {
+        LOG4CXX_DEBUG(logger, "MQTT message delivered ("
+                                  << token->get_message()->get_payload().size()
+                                  << " bytes)")
+    }
+}
+
+void forwardMidiMqttRetransmitterEventCallback(
+    double timeStamp, std::vector<unsigned char> *message, void *userData)
+{
+    auto retransmitter = static_cast<MidiMqttRetransmitter *>(userData);
+    if (retransmitter)
+    {
+        retransmitter->midiEventReceived(timeStamp, message, userData);
+    }
+    else
+    {
+        LOG4CXX_ERROR(logger, "Invalid pointer in MIDI event callback")
+    }
+}
 }

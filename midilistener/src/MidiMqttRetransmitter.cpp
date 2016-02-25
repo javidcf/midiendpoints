@@ -97,7 +97,7 @@ void MidiMqttRetransmitter::midiEventReceived(
     {
         m_message.str(std::string{});
 
-        // Not using JSON library (for now at least)
+        // Not using JSON library here (for now at least)
         m_message << BSF_JSON_BEGIN << "{"
                   << "\"" << JSON_TIMESTAMP << "\":" << timeStamp << ","
                   << "\"" << JSON_EVENT_DATA << "\":\"";
@@ -110,8 +110,9 @@ void MidiMqttRetransmitter::midiEventReceived(
         m_message.seekp(-1, std::ios_base::end);
         // Finish message
         m_message << "\"}" << BSF_JSON_END;
-
         auto payload = m_message.str();
+
+        LOG4CXX_DEBUG(logger, "Publishing MQTT message")
         m_mqtt.publish(m_mqttTopic, payload.c_str(), payload.size(), MQTT_QOS,
                        MQTT_RETAIN);
     }
@@ -120,7 +121,7 @@ void MidiMqttRetransmitter::midiEventReceived(
 void MidiMqttRetransmitter::message_arrived(const std::string &topic,
                                      mqtt::message::ptr_t /*message*/)
 {
-    LOG4CXX_ERROR(logger, "Unexpected MQWTT message received on topic '" << topic << "'")
+    LOG4CXX_ERROR(logger, "Unexpected MQTT message received on topic '" << topic << "'")
 }
 
 void MidiMqttRetransmitter::connection_lost(const std::string & /*cause*/)

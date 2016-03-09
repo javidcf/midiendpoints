@@ -3,10 +3,7 @@
 #define MIDIMQTTPLAYER_H
 
 #include <b64/decode.h>
-#include <mqtt/callback.h>
-#include <mqtt/client.h>
-#include <mqtt/delivery_token.h>
-#include <mqtt/message.h>
+#include <mosquittopp.h>
 #include <RtMidi.h>
 
 #include <sstream>
@@ -22,7 +19,7 @@ namespace midiendpoints
 //! MIDI messages are received as BSF-compliant JSON messages from a MQTT topic
 //! and played through a Jack MIDI port.
 //!
-class MidiMqttPlayer : private mqtt::callback
+class MidiMqttPlayer : private mosqpp::mosquittopp
 {
 
   public:
@@ -35,14 +32,14 @@ class MidiMqttPlayer : private mqtt::callback
     //!
     //! \brief Constructor.
     //!
-    //! \param mqttServerUri URI of the MQTT server
-    //! \param mqttClientId MQTT client identifier used to subscribe to the
-    //!                     messages
-    //! \param mqttTopic Topic of the MQTT topic to subscribe
+    //! \param mqttServer MQTT server name or address
+    //! \param mqttPort MQTT port
+    //! \param mqttTopic Topic of the MQTT topic where messages are published
+    //! \param clientName Client identifier for MQTT and MIDI
     //!
-    MidiMqttPlayer(const std::string &mqttServerUri,
-                   const std::string &mqttClientId,
-                   const std::string &mqttTopic);
+    MidiMqttPlayer(const std::string &mqttServer, unsigned int mqttPort,
+                   const std::string &mqttTopic,
+                   const std::string &clientName);
 
     //!
     //! \brief Start the player.
@@ -66,8 +63,10 @@ class MidiMqttPlayer : private mqtt::callback
   private:
     //! MIDI output
     RtMidiOut m_midiOut;
-    //! MQTT client
-    mqtt::client m_mqtt;
+    //! MQTT server
+    const std::string m_mqttServer;
+    //! MQTT port
+    const unsigned int m_mqttPort;
     //! MQTT topic
     const std::string m_mqttTopic;
     //! Base64 decoder
@@ -79,14 +78,14 @@ class MidiMqttPlayer : private mqtt::callback
     //! Whether the retransmitter has been started
     bool m_started;
 
-    //! MQTT callback for lost connection
-    virtual void connection_lost(const std::string & cause);
+    //! MQTT callback for connection establishment
+    virtual void on_connect(int rc);
 
-    //! MQTT callback for new messages
-    virtual void message_arrived(const std::string & topic, mqtt::message::ptr_t message);
+    //! MQTT callback for disconnection
+    virtual void on_disconnect(int rc);
 
-    //! MQTT callback for completed deliveries
-    virtual void delivery_complete(mqtt::idelivery_token::ptr_t token);
+    //! MQTT callback for message arrival
+    virtual void on_message(const struct mosquitto_message *message);
 };
 }
 

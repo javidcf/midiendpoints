@@ -4,6 +4,7 @@
 
 #include <log4cxx/logger.h>
 
+#include <chrono>
 #include <istream>
 
 namespace midiendpoints
@@ -27,22 +28,26 @@ const std::string MidiMqttRetransmitter::MIDI_CLIENT_NAME{"midilistener"};
 void forwardMidiMqttRetransmitterEventCallback(
     double timeStamp, std::vector<unsigned char> *message, void *userData);
 
-MidiMqttRetransmitter::MidiMqttRetransmitter(const std::string &mqttServerUri,
-                                             const std::string &mqttClientId,
-                                             const std::string &mqttTopic)
-: m_midiIn(MIDI_API, MIDI_CLIENT_NAME)
-, m_mqtt(mqttServerUri, mqttClientId)
-, m_mqttTopic(mqttTopic)
+MidiMqttRetransmitter::MidiMqttRetransmitter(const std::string &mqttServer,
+                                             unsigned int mqttPort,
+                                             const std::string &mqttTopic,
+                                             const std::string &clientName)
+: mosqpp::mosquittopp(clientName.c_str())
+, m_midiIn(MIDI_API, clientName)
+, m_mqttServer{mqttServer}
+, m_mqttPort{mqttPort}
+, m_mqttTopic{mqttTopic}
 , m_b64Encoder()
 , m_message()
 , m_started{false}
 {
-    m_mqtt.set_callback(*this);
+    mosqpp::lib_init();
 }
 
 MidiMqttRetransmitter::~MidiMqttRetransmitter()
 {
     stop();
+    mosqpp::lib_cleanup();
 }
 
 void MidiMqttRetransmitter::start()
@@ -56,7 +61,8 @@ void MidiMqttRetransmitter::start()
         }
 
         // MQTT connection
-        m_mqtt.connect();
+        connect(m_mqttServer.data(), m_mqttPort);
+        loop_start();
 
         // MIDI input
         m_midiIn.openPort(0, "midi_in");
@@ -64,6 +70,7 @@ void MidiMqttRetransmitter::start()
         // midiin->ignoreTypes( false, false, false );
 
         m_started = true;
+
         LOG4CXX_INFO(logger, "MIDI listener started")
     }
     else
@@ -76,26 +83,31 @@ void MidiMqttRetransmitter::stop()
 {
     if (m_started)
     {
+        LOG4CXX_DEBUG(logger, "Stopping listener...")
+        m_started = false;
         m_midiIn.cancelCallback();
         m_midiIn.closePort();
-        if (m_mqtt.is_connected())
-        {
-            m_mqtt.disconnect();
-        }
-        m_started = false;
+        disconnect();
+        loop_stop();
+        LOG4CXX_INFO(logger, "MIDI listener stopped")
     }
 }
 
 void MidiMqttRetransmitter::midiEventReceived(
-    double timeStamp, std::vector<unsigned char> *message, void * /*userData*/)
+    double /*midiTimeStamp*/, std::vector<unsigned char> *message,
+    void * /*userData*/)
 {
-    LOG4CXX_DEBUG(logger, "MIDI event received at " << timeStamp << " ("
-                                                    << message->size()
-                                                    << " bytes)")
+    LOG4CXX_DEBUG(logger, "MIDI event received (" << message->size()
+                                                  << " bytes)")
 
     if (message->size() > 0)
     {
         m_message.str(std::string{});
+
+        // Get time stamp
+        auto timeStamp =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
 
         // Not using JSON library here (for now at least)
         m_message << BSF_JSON_BEGIN << "{"
@@ -113,30 +125,47 @@ void MidiMqttRetransmitter::midiEventReceived(
         auto payload = m_message.str();
 
         LOG4CXX_DEBUG(logger, "Publishing MQTT message")
-        m_mqtt.publish(m_mqttTopic, payload.c_str(), payload.size(), MQTT_QOS,
-                       MQTT_RETAIN);
+        publish(NULL, m_mqttTopic.data(), payload.size(), payload.data(),
+                MQTT_QOS, MQTT_RETAIN);
     }
 }
 
-void MidiMqttRetransmitter::message_arrived(const std::string &topic,
-                                     mqtt::message::ptr_t /*message*/)
+void MidiMqttRetransmitter::on_publish(int /*mid*/)
 {
-    LOG4CXX_ERROR(logger, "Unexpected MQTT message received on topic '" << topic << "'")
+    LOG4CXX_DEBUG(logger, "MQTT message delivered")
 }
 
-void MidiMqttRetransmitter::connection_lost(const std::string & /*cause*/)
+void MidiMqttRetransmitter::on_connect(int rc)
 {
-    // TODO handle error? raise exception?
-    LOG4CXX_ERROR(logger, "MQTT connection lost")
-}
-
-void MidiMqttRetransmitter::delivery_complete(mqtt::idelivery_token::ptr_t token)
-{
-    if (token && token->get_message())
+    LOG4CXX_DEBUG(logger, "MQTT connection established")
+    if (rc == 0)
     {
-        LOG4CXX_DEBUG(logger, "MQTT message delivered ("
-                                  << token->get_message()->get_payload().size()
-                                  << " bytes)")
+        LOG4CXX_DEBUG(logger, "MQTT connection established")
+    }
+    else if (m_started)
+    {
+        LOG4CXX_ERROR(logger, "Could not connect to MQTT server, retrying...")
+        reconnect_async();
+    }
+}
+
+void MidiMqttRetransmitter::on_disconnect(int rc)
+{
+    if (rc == 0)
+    {
+        if (m_started)
+        {
+            LOG4CXX_ERROR(logger, "MQTT connection lost, reconnecting...")
+            reconnect_async();
+        }
+        else
+        {
+            LOG4CXX_DEBUG(logger, "Disconnected from MQTT server")
+        }
+    }
+    else if (!m_started)
+    {
+        LOG4CXX_ERROR(logger, "Could not disconnect from MQTT server")
     }
 }
 

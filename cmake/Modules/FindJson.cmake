@@ -20,9 +20,7 @@ find_path(Json_INCLUDE_DIR
 # No libraries needed
 set(Json_LIBRARY "")
 
-if (Json_PKGCONF_VERSION)
-  set(Json_VERSION PahoCpp_PKGCONF_VERSION)
-else()
+if (NOT Json_VERSION)
   # TODO: find proper version string
   #set(Json_VERSION 2.0.0)
 endif()

@@ -13,15 +13,17 @@ set_property(TARGET midilistener PROPERTY CXX_STANDARD_REQUIRED 1)
 # Dependencies
 include_directories (
   ${RtMidi_INCLUDE_DIRS}
-  ${PahoCpp_INCLUDE_DIRS}
+  ${Mosquittopp_INCLUDE_DIRS}
   ${Json_INCLUDE_DIRS}
   ${B64_INCLUDE_DIRS}
   ${Log4cxx_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 target_link_libraries (midilistener
   ${RtMidi_LIBRARIES}
-  ${PahoCpp_LIBRARIES}
+  ${Mosquittopp_LIBRARIES}
   ${Json_LIBRARIES}
   ${B64_LIBRARIES}
   ${Log4cxx_LIBRARIES}
+  ${Boost_LIBRARIES}
 )

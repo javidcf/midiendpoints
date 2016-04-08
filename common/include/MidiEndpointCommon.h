@@ -2,17 +2,35 @@
 #ifndef MIDIENDPOINTCOMMON_H
 #define MIDIENDPOINTCOMMON_H
 
+#include <masmusic.pb.h>
+
+#if GOOGLE_PROTOBUF_VERSION >= 3000000
+#define USE_PROTOBUF_V3
+#endif
+
+#ifdef USE_PROTOBUF_V3
+#include <bsf/ProtobufPtrDataReading.h>
+#else
+#include <bsf/ProtobufDataReading.h>
+#endif
+
 #include <log4cxx/basicconfigurator.h>
 #include <log4cxx/propertyconfigurator.h>
 #include <RtMidi.h>
 
 #include <fstream>
+#include <functional>
+#include <memory>
 #include <stdexcept>
 #include <streambuf>
 #include <string>
 
 #ifndef NDEBUG
 #define DEBUG 1
+#endif
+
+#ifdef USE_PROTOBUF_V3
+#include <google/protobuf/arena.h>
 #endif
 
 namespace midiendpoints
@@ -22,22 +40,26 @@ namespace midiendpoints
 const std::string LOGGER_CONF_PATH{"/etc/midiendpoints/logging.conf"};
 
 //! RtMidi API
-const RtMidi::Api MIDI_API = RtMidi::UNIX_JACK;  // TODO tweak this
+const RtMidi::Api MIDI_API = RtMidi::UNIX_JACK; // TODO tweak this
 
 //! MQTT quality of service
-const int MQTT_QOS = 1;  // TODO tune this
+const int MQTT_QOS = 0; // TODO tune this
 //! MQTT retain policy
 const bool MQTT_RETAIN = false;
 
-//! BSF JSON message begin mark
-const std::string BSF_JSON_BEGIN{"<JSON>"};
-//! BSF JSON message end mark
-const std::string BSF_JSON_END{"</JSON>"};
+//! Reading type
+#ifdef USE_PROTOBUF_V3
+typedef bsf::ProtobufPtrDataReading<masmusic::TimeSpanNote> TimeSpanNoteReading;
+typedef bsf::ProtobufArenaDataReadingFactory<masmusic::TimeSpanNote>
+    TimeSpanNoteReadingFactory;
+#else
+typedef bsf::ProtobufDataReading<masmusic::TimeSpanNote> TimeSpanNoteReading;
+typedef bsf::DefaultDataReadingFactory<masmusic::TimeSpanNote>
+    TimeSpanNoteReadingFactory;
+#endif
 
-//! JSON timestamp field
-const std::string JSON_TIMESTAMP{"at"};
-//! JSON event data field
-const std::string JSON_EVENT_DATA{"data"};
+//! MIDI default velocity
+const unsigned char DEFAULT_VELOCITY{64};
 
 //!
 //! \brief An exception in a MIDI endpoint.
@@ -45,13 +67,16 @@ const std::string JSON_EVENT_DATA{"data"};
 class MidiEndpointException : public std::runtime_error
 {
 public:
-    explicit MidiEndpointException (const std::string& what) : runtime_error(what) {}
+    explicit MidiEndpointException(const std::string &what)
+    : runtime_error(what)
+    {
+    }
 };
 
 //!
 //! Stream buffer for an array.
 //!
-template<class CharT, class TraitsT = std::char_traits< CharT > >
+template <class CharT, class TraitsT = std::char_traits<CharT>>
 struct membuf : std::streambuf
 {
     //!
@@ -60,7 +85,8 @@ struct membuf : std::streambuf
     //! \param begin Beginning of the memory buffer
     //! \param end End of the memory buffer
     //!
-    membuf(CharT * begin, CharT * end) {
+    membuf(CharT *begin, CharT *end)
+    {
         this->setg(begin, begin, end);
     }
 };
@@ -72,8 +98,8 @@ struct membuf : std::streambuf
 //! \param end End of the memory buffer
 //! \return A memory buffer for the given segment of memory.
 //!
-template<class CharT, class TraitsT = std::char_traits< CharT > >
-membuf<CharT, TraitsT> make_membuf(CharT * begin, CharT * end)
+template <class CharT, class TraitsT = std::char_traits<CharT>>
+membuf<CharT, TraitsT> make_membuf(CharT *begin, CharT *end)
 {
     return membuf<CharT, TraitsT>(begin, end);
 }
@@ -84,7 +110,9 @@ membuf<CharT, TraitsT> make_membuf(CharT * begin, CharT * end)
 //! Tries to load the logging configuration from a configuration file first and
 //! falls back to the default configuration if it does not exist.
 //!
-inline void configureLogging()
+//! \param debug Log debug messages
+//!
+inline void configureLogging(bool debug = false)
 {
     std::ifstream confFile(LOGGER_CONF_PATH);
     if (confFile.good())
@@ -95,13 +123,72 @@ inline void configureLogging()
     {
         log4cxx::BasicConfigurator::configure();
     }
-    #if DEBUG
-    log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getDebug());
-    #else
-    log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
-    #endif
+    if (debug)
+    {
+        log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getDebug());
+    }
+    else
+    {
+        log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
+    }
+}
 }
 
+/// MasMusic helpers
+
+namespace midiendpoints
+{
+
+//!
+//! \brief Convert a pitch into a MIDI note value.
+//!
+//! If the pitch is out of the MIDI range then the closes unison is returned.
+//!
+//! \param pitch Pitch to convert
+//! \return Converted MIDI note value
+//!
+unsigned char pitchToMidi(const masmusic::Pitch &pitch)
+{
+    int semitoneNumber = static_cast<int>(pitch.note());
+    int octave = std::min(std::max(pitch.octave(), -1), 9);
+    int midiNote = (octave + 1) * 12 + semitoneNumber;
+    if (midiNote > 127)
+    {
+        midiNote -= 12;
+    }
+
+    return static_cast<unsigned char>(midiNote);
+}
+
+//!
+//! \brief Convert a MIDI note value into a pitch.
+//!
+//! \param midiNote MIDI note value
+//! \param pitch Converted pitch
+//!
+void midiToPitch(unsigned char midiNote, masmusic::Pitch *pitch)
+{
+    if ((midiNote & 0x80) != 0)
+    {
+        throw std::runtime_error("Invalid MIDI note");
+    }
+    auto note = static_cast<masmusic::Note>(midiNote % 12);
+    pitch->set_note(note);
+    pitch->set_octave(int(midiNote / 12) - 1);
+}
+
+//!
+//! \brief Convert a MIDI note value into a pitch.
+//!
+//! \param midiNote MIDI note value
+//! \return Converted pitch
+//!
+masmusic::Pitch midiToPitch(unsigned char midiNote)
+{
+    masmusic::Pitch pitch;
+    midiToPitch(midiNote, &pitch);
+    return pitch;
+}
 }
 
 #endif

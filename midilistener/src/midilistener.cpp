@@ -1,7 +1,8 @@
 
 #include "MidiEndpointCommon.h"
-#include "MidiMqttRetransmitter.h"
+#include "MusicSensor.h"
 
+#include <bsf/AsyncMqttTransport.h>
 #include <boost/program_options.hpp>
 #include <log4cxx/logger.h>
 
@@ -9,14 +10,14 @@
 
 static const char *DEFAULT_SERVER = "localhost";
 static const unsigned int DEFAULT_PORT = 1883;
-static const char *DEFAULT_TOPIC = "midi";
+static const char *DEFAULT_TOPIC = "music";
 static const char *DEFAULT_CLIENT_NAME = "midilistener";
 
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("midilistener"));
 
 bool parseOptions(int argc, char *argv[], std::string &mqttServer,
                   unsigned int &mqttPort, std::string &mqttTopic,
-                  std::string &clientName);
+                  std::string &clientName, bool &debug);
 
 int main(int argc, char *argv[])
 {
@@ -26,25 +27,33 @@ int main(int argc, char *argv[])
     unsigned int mqttPort;
     std::string clientName;
     std::string mqttTopic;
-    if (!parseOptions(argc, argv, mqttServer, mqttPort, mqttTopic, clientName))
+    bool debug;
+
+    if (!parseOptions(argc, argv, mqttServer, mqttPort, mqttTopic, clientName,
+                      debug))
     {
         return 0;
     }
 
-    configureLogging();
+    configureLogging(debug);
 
     try
     {
-        MidiMqttRetransmitter retransmitter(mqttServer, mqttPort, mqttTopic,
-                                            clientName);
-        retransmitter.start();
+        bsf::AsyncMqttTransport transport(clientName, mqttServer, mqttPort,
+                                          MQTT_QOS);
+        MusicSensor<bsf::AsyncMqttTransport> sensor(transport, mqttTopic,
+                                                    clientName);
+
+        transport.start();
+        sensor.start();
 
         // TODO make this right
         LOG4CXX_INFO(logger, "Reading MIDI input, press <enter> to quit...")
         char input;
         std::cin.get(input);
 
-        retransmitter.stop();
+        sensor.stop();
+        transport.stop();
     }
     catch (std::exception &e)
     {
@@ -56,7 +65,7 @@ int main(int argc, char *argv[])
 
 bool parseOptions(int argc, char *argv[], std::string &mqttServer,
                   unsigned int &mqttPort, std::string &mqttTopic,
-                  std::string &clientName)
+                  std::string &clientName, bool &debug)
 {
     namespace po = boost::program_options;
 
@@ -67,6 +76,7 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
         unsigned int port;
         std::string topic;
         std::string name;
+        bool debugFlag;
 
         // clang-format off
         po::options_description desc("Allowed options");
@@ -75,7 +85,8 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
             ("server,s", po::value<std::string>(&server)->default_value(DEFAULT_SERVER), "server address or host name")
             ("port,p", po::value<unsigned int>(&port)->default_value(DEFAULT_PORT), "server port")
             ("topic,t", po::value<std::string>(&topic)->default_value(DEFAULT_TOPIC), "MQTT topic")
-            ("name,n", po::value<std::string>(&name)->default_value(DEFAULT_CLIENT_NAME), "MQTT and MIDI client name");
+            ("name,n", po::value<std::string>(&name)->default_value(DEFAULT_CLIENT_NAME), "MQTT and MIDI client name")
+            ("debug,d", po::bool_switch(&debugFlag),"print debug messages");
         // clang-format on
 
         po::variables_map vm;
@@ -92,6 +103,7 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
         mqttPort = port;
         mqttTopic = topic;
         clientName = name;
+        debug = debugFlag;
 
         return true;
     }

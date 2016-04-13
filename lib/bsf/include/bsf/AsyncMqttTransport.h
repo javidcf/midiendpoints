@@ -2,7 +2,9 @@
 #ifndef BSF_ASYNCMQTTTRANSPORT_H
 #define BSF_ASYNCMQTTTRANSPORT_H
 
+#include "common.h"
 #include "AbstractTransport.h"
+#include "Singleton.h"
 
 #include <functional>
 #include <memory>

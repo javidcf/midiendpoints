@@ -21,8 +21,7 @@ template <typename TransportT>
 MusicSensorClient<TransportT>::MusicSensorClient(
     const Transport &transport, const typename Transport::Channel &channel,
     const std::string &midiClientName)
-: bsf::SensorClient<TransportT, TimeSpanNoteReading,
-                    TimeSpanNoteReadingFactory>(transport, channel)
+: MusicSensorClientParent<TransportT>(transport, channel)
 , m_midiOut(MIDI_API, midiClientName)
 , m_midiChannel{0}
 , m_midiProgram{0}

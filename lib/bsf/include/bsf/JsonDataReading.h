@@ -28,23 +28,21 @@ static const unsigned char JSON_BEGIN{'{'};
 static const unsigned char JSON_END{'}'};
 
 template <>
-struct Serializer<JsonDataReading>
+class DefaultSerializer<JsonDataReading>
+    : public AbstractSerializer<JsonDataReading>
 {
-    void operator()(const JsonDataReading &reading,
-                    std::vector<unsigned char> &message) const
+public:
+    void serialize(const JsonDataReading &reading,
+                   std::vector<unsigned char> &message) const
     {
         auto str = reading.dump();
         auto p = reinterpret_cast<const unsigned char *>(str.data());
         message.resize(str.size());
         rserialized.assign(p, p + str.size());
     }
-};
 
-template <>
-struct Deserializer<JsonDataReading>
-{
-    JsonDataReading operator()(const std::vector<unsigned char> &message,
-                               JsonDataReading &reading) const
+    void deserialize(const std::vector<unsigned char> &message,
+                     JsonDataReading &reading) const
     {
         auto begin = std::find(message.begin(), message.end(), JSON_BEGIN);
         auto end = std::find(message.rbegin(), message.rend(), JSON_END).base();

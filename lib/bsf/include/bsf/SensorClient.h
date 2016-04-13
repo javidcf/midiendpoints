@@ -19,9 +19,11 @@ namespace bsf
 //!
 //! \tparam TransportT Transport type for the sensor client
 //! \tparam DataReadingT Data reading type for the sensor client
+//! \tparam SerializerT Serializer type for the sensor client
 //! \tparam DataReadingFactoryT Data reading factory type for the sensor client
 //!
 template <typename TransportT, typename DataReadingT,
+          typename SerializerT = DefaultSerializer<DataReadingT>,
           typename DataReadingFactoryT =
               DefaultDataReadingFactory<DataReadingT>>
 class SensorClient
@@ -33,6 +35,8 @@ public:
     typedef typename TransportT::Channel Channel;
     //! Data reading type for the sensor client.
     typedef DataReadingT DataReading;
+    //! Serializer type for the sensor.
+    typedef SerializerT Serializer;
     //! Data reading type for the sensor.
     typedef DataReadingFactoryT DataReadingFactory;
     //! Handler function for received data readings.
@@ -49,15 +53,16 @@ public:
     //! \param factory Data reading factory
     //!
     SensorClient(Transport transport, Channel channel = Channel(),
+                 Serializer serializer = Serializer(),
                  DataReadingFactory factory = DataReadingFactory())
     : m_transport{std::move(transport)}
     , m_channel{std::move(channel)}
+    , m_serializer{std::move(serializer)}
     , m_factory{std::move(factory)}
-    , m_deserializer()
     , m_handlers()
     , m_currentToken{0}
     , m_transportToken(m_transport.addHandler(
-          std::bind(&SensorClient<Transport, DataReading,
+          std::bind(&SensorClient<Transport, DataReading, Serializer,
                                   DataReadingFactory>::processMessage,
                     this, std::placeholders::_1),
           m_channel))
@@ -160,10 +165,10 @@ private:
     Transport m_transport;
     //! Channel for the sensor client
     const Channel m_channel;
+    //! Message serializer
+    Serializer m_serializer;
     //! Data reading factory
     DataReadingFactory m_factory;
-    //! Message deserializer
-    Deserializer<DataReadingT> m_deserializer;
     //! Handlers for the received readings
     std::unordered_map<HandlerToken, Handler> m_handlers;
     //! Next handler token to be assigned
@@ -184,7 +189,7 @@ private:
         try
         {
             DataReading reading{m_factory.newDataReading()};
-            m_deserializer(message, reading);
+            m_serializer.deserialize(message, reading);
             auto runHandlers = onDataReading(reading);
             if (runHandlers)
             {

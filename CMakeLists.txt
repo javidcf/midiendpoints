@@ -14,6 +14,8 @@ endif()
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${warnings}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${warnings}")
 
+set(USE_BASE64 ON CACHE BOOL "Whether to use Base64 encoding")
+
 # Dependencies
 # Versions are not being properly set right now...
 
@@ -36,6 +38,12 @@ find_package (Boost ${Boost_VERSION} REQUIRED COMPONENTS program_options)
 find_package (Asio ${Asio_VERSION} REQUIRED)
 
 find_package (Protobuf REQUIRED)
+
+if (USE_BASE64)
+    #set (B64_VERSION 1.2)
+    find_package (B64 ${B64_VERSION} REQUIRED)
+    add_definitions (-DUSE_BASE64)
+endif ()
 
 set(Common_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/common/include;${CMAKE_BINARY_DIR}")
 

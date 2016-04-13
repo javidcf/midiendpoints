@@ -18,6 +18,11 @@
 namespace midiendpoints
 {
 
+template <typename TransportT>
+using MusicSensorClientParent =
+    bsf::SensorClient<TransportT, TimeSpanNoteReading, TimeSpanNoteSerializer,
+                      TimeSpanNoteReadingFactory>;
+
 //!
 //! \brief Plays music messages coming from a BSF network.
 //!
@@ -27,9 +32,7 @@ namespace midiendpoints
 //! \tparam TransportT BSF transport type
 //!
 template <typename TransportT>
-class MusicSensorClient
-    : private bsf::SensorClient<TransportT, TimeSpanNoteReading,
-                                TimeSpanNoteReadingFactory>
+class MusicSensorClient : private MusicSensorClientParent<TransportT>
 {
 public:
     //! BSF transport type

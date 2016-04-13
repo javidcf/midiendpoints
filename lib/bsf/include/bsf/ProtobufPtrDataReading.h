@@ -82,31 +82,25 @@ private:
 
 template <>
 template <typename MessageT>
-struct Serializer<ProtobufPtrDataReading<MessageT>>
+class DefaultSerializer<ProtobufDataReading<MessageT>>
+    : public AbstractSerializer<ProtobufDataReading<MessageT>>
 {
-    void operator()(const ProtobufPtrDataReading<MessageT> &reading,
-                    std::vector<unsigned char> &message) const
+public:
+    void serialize(const ProtobufPtrDataReading<MessageT> &reading,
+                   std::vector<unsigned char> &message) const
     {
-        std::vector<unsigned char> serialized;
-        serialized.resize(reading->ByteSize());
-        auto ok =
-            reading->SerializeToArray(serialized.data(), serialized.size());
+        message.resize(reading->ByteSize());
+        auto ok = reading->SerializeToArray(message.data(), message.size());
         if (!ok)
         {
+            message.clear();
             throw SerializationError(
                 "Could not serialize protocol buffers message");
         }
-        return serialized;
     }
-};
 
-template <>
-template <typename MessageT>
-struct Deserializer<ProtobufPtrDataReading<MessageT>>
-{
-    ProtobufPtrDataReading<MessageT>
-    operator()(const std::vector<unsigned char> &message,
-               ProtobufPtrDataReading<MessageT> &reading)
+    void deserialize(const std::vector<unsigned char> &message,
+                     ProtobufPtrDataReading<MessageT> &reading) const
     {
         auto ok = reading->ParseFromArray(message.data(), message.size());
         if (!ok)
@@ -114,7 +108,6 @@ struct Deserializer<ProtobufPtrDataReading<MessageT>>
             throw SerializationError(
                 "Could not parse protocol buffers message");
         }
-        return reading;
     }
 };
 

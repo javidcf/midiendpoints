@@ -76,10 +76,12 @@ private:
 
 template <>
 template <typename MessageT>
-struct Serializer<ProtobufDataReading<MessageT>>
+class DefaultSerializer<ProtobufDataReading<MessageT>>
+    : public AbstractSerializer<ProtobufDataReading<MessageT>>
 {
-    void operator()(const ProtobufDataReading<MessageT> &reading,
-                    std::vector<unsigned char> &message) const
+public:
+    void serialize(const ProtobufDataReading<MessageT> &reading,
+                   std::vector<unsigned char> &message) const
     {
         message.resize(reading->ByteSize());
         auto ok = reading->SerializeToArray(message.data(), message.size());
@@ -90,14 +92,9 @@ struct Serializer<ProtobufDataReading<MessageT>>
                 "Could not serialize protocol buffers message");
         }
     }
-};
 
-template <>
-template <typename MessageT>
-struct Deserializer<ProtobufDataReading<MessageT>>
-{
-    void operator()(const std::vector<unsigned char> &message,
-                    ProtobufDataReading<MessageT> &reading) const
+    void deserialize(const std::vector<unsigned char> &message,
+                     ProtobufDataReading<MessageT> &reading) const
     {
         auto ok = reading->ParseFromArray(message.data(), message.size());
         if (!ok)

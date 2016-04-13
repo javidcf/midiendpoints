@@ -20,6 +20,7 @@ include_directories (
   ${Log4cxx_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${PROTOBUF_INCLUDE_DIRS}
+  ${B64_INCLUDE_DIRS}
 )
 target_link_libraries (midiemitter
   ${BSF_LIBRARIES}
@@ -28,5 +29,6 @@ target_link_libraries (midiemitter
   ${Log4cxx_LIBRARIES}
   ${Boost_LIBRARIES}
   ${PROTOBUF_LIBRARIES}
+  ${B64_LIBRARIES}
 )
 include (UseAsio)

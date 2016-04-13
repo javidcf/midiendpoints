@@ -18,12 +18,10 @@ template <typename TransportT>
 MusicSensor<TransportT>::MusicSensor(
     const TransportT &transport, const typename TransportT::Channel &channel,
     const std::string &midiClientName)
-: bsf::Sensor<TransportT, TimeSpanNoteReading, TimeSpanNoteReadingFactory>(
-      transport, channel)
+: MusicSensorParent<TransportT>(transport, channel)
 , m_midiIn(MIDI_API, midiClientName)
 , m_midiParserStatus{MidiParserStatus::WAITING_ON}
-, m_reading{bsf::Sensor<TransportT, TimeSpanNoteReading,
-                        TimeSpanNoteReadingFactory>::newDataReading()}
+, m_reading{MusicSensorParent<TransportT>::newDataReading()}
 , m_started{false}
 {
 }
@@ -135,8 +133,7 @@ void MusicSensor<TransportT>::midiEventReceived(
                 m_reading->set_timestamp(timeStampMs);
                 LOG4CXX_DEBUG(logger(), "Publishing message:\n"
                                             << m_reading->ShortDebugString())
-                bsf::Sensor<TransportT, TimeSpanNoteReading,
-                            TimeSpanNoteReadingFactory>::publish(m_reading);
+                MusicSensorParent<TransportT>::publish(m_reading);
 
                 m_midiParserStatus = MidiParserStatus::WAITING_NOTE;
             }

@@ -17,17 +17,21 @@
 namespace midiendpoints
 {
 
+template <typename TransportT>
+using MusicSensorParent =
+    bsf::Sensor<TransportT, TimeSpanNoteReading, TimeSpanNoteSerializer,
+                TimeSpanNoteReadingFactory>;
+
 //!
 //! \brief Retransmits music messages to a BSF network.
 //!
-//! Music messages are received through a Jack MIDI port and retransmitted into
-//! a BSF network in a protocol buffers message.
+//! Music messages are received through a Jack MIDI port and retransmitted
+//! into a BSF network in a protocol buffers message.
 //!
 //! \tparam TransportT BSF transport type
 //!
 template <typename TransportT>
-class MusicSensor : private bsf::Sensor<TransportT, TimeSpanNoteReading,
-                                        TimeSpanNoteReadingFactory>
+class MusicSensor : private MusicSensorParent<TransportT>
 {
 public:
     //! BSF transport type

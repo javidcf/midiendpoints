@@ -8,6 +8,10 @@
 #define USE_PROTOBUF_V3
 #endif
 
+#ifdef USE_BASE64
+#include <bsf/Base64Serializer.h>
+#endif
+
 #ifdef USE_PROTOBUF_V3
 #include <bsf/ProtobufPtrDataReading.h>
 #else
@@ -27,10 +31,6 @@
 
 #ifndef NDEBUG
 #define DEBUG 1
-#endif
-
-#ifdef USE_PROTOBUF_V3
-#include <google/protobuf/arena.h>
 #endif
 
 namespace midiendpoints
@@ -56,6 +56,13 @@ typedef bsf::ProtobufArenaDataReadingFactory<masmusic::TimeSpanNote>
 typedef bsf::ProtobufDataReading<masmusic::TimeSpanNote> TimeSpanNoteReading;
 typedef bsf::DefaultDataReadingFactory<masmusic::TimeSpanNote>
     TimeSpanNoteReadingFactory;
+#endif
+
+//! Serializer type
+#ifdef USE_BASE64
+typedef bsf::Base64Serializer<TimeSpanNoteReading> TimeSpanNoteSerializer;
+#else
+typedef bsf::DefaultSerializer<TimeSpanNoteReading> TimeSpanNoteSerializer;
 #endif
 
 //! MIDI default velocity

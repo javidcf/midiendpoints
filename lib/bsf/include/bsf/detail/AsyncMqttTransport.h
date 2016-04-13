@@ -9,6 +9,9 @@
 namespace bsf
 {
 
+namespace detail
+{
+
 //! \brief Mosquitto initalization and cleanup manager.
 class MqttInitializer
 {
@@ -30,6 +33,8 @@ private:
     }
 };
 
+}
+
 //! \brief Implementation.
 struct AsyncMqttTransport::Impl : public mosqpp::mosquittopp
 {
@@ -45,7 +50,7 @@ struct AsyncMqttTransport::Impl : public mosqpp::mosquittopp
     , m_port{port}
     , m_qos{qos}
     , m_retain{false}
-    , m_init(WeakSingleton<MqttInitializer>::getInstance())
+    , m_init(WeakSingleton<detail::MqttInitializer>::getInstance())
     {
     }
 
@@ -120,7 +125,7 @@ struct AsyncMqttTransport::Impl : public mosqpp::mosquittopp
     unsigned int m_port;
     int m_qos;
     bool m_retain;
-    std::shared_ptr<MqttInitializer> m_init;
+    std::shared_ptr<detail::MqttInitializer> m_init;
 };
 
 AsyncMqttTransport::AsyncMqttTransport(const std::string &clientName,

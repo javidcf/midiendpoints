@@ -80,10 +80,13 @@ private:
     MessageT *m_message;
 };
 
+//!
+//! \brief Default serializer for protocol buffers pointer data readings.
+//!
 template <>
 template <typename MessageT>
-class DefaultSerializer<ProtobufDataReading<MessageT>>
-    : public AbstractSerializer<ProtobufDataReading<MessageT>>
+class DefaultSerializer<ProtobufPtrDataReading<MessageT>>
+    : public AbstractSerializer<ProtobufPtrDataReading<MessageT>>
 {
 public:
     void serialize(const ProtobufPtrDataReading<MessageT> &reading,

@@ -74,6 +74,9 @@ private:
     MessageT m_message;
 };
 
+//!
+//! \brief Default serializer for protocol buffers pointer data readings.
+//!
 template <>
 template <typename MessageT>
 class DefaultSerializer<ProtobufDataReading<MessageT>>

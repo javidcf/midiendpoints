@@ -27,6 +27,9 @@ static const unsigned char JSON_BEGIN{'{'};
 //! Ending character of a JSON document.
 static const unsigned char JSON_END{'}'};
 
+//!
+//! \brief Default serializer for JSON data readings.
+//!
 template <>
 class DefaultSerializer<JsonDataReading>
     : public AbstractSerializer<JsonDataReading>

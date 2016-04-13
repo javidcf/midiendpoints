@@ -42,6 +42,11 @@ class DefaultSerializer : public AbstractSerializer<DataReadingT>
 {
 };
 
+//!
+//! \brief Static type checking type for serializers.
+//!
+//! \tparam SerializerT A type to be checked whether it is a serializer
+//!
 template <typename SerializerT>
 struct IsSerializer
 {
@@ -54,6 +59,7 @@ private:
     static no test( ... );
 
 public:
+    //! True if the given type is a serializer; false otherwise.
     static const bool value = sizeof(test<SerializerT>(nullptr)) == sizeof(yes);
 };
 

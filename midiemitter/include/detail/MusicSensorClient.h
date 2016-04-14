@@ -104,7 +104,7 @@ bool MusicSensorClient<TransportT>::onDataReading(
     auto nowMs = duration_cast<milliseconds>(now);
 
     LOG4CXX_DEBUG(logger(),
-                  "Received message\n:" << reading->ShortDebugString())
+                  "Received message:\n" << reading->ShortDebugString())
 
     // Read message data
     milliseconds timestampMs(reading->timestamp());

@@ -49,8 +49,8 @@ public:
         // Copy encoded message to vector
         message.resize(((decoded.size() + 2) / 3) * 4);
         auto p2 = reinterpret_cast<char *>(message.data());
-        decodedStream.read(p2, message.size());
-        message.resize(decodedStream.gcount());
+        encodedStream.read(p2, message.size());
+        message.resize(encodedStream.gcount());
     }
 
     void

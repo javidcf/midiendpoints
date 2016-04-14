@@ -91,8 +91,8 @@ bool MusicSensorClient<TransportT>::onDataReading(
     using namespace std::chrono;
 
     // 500ms of note duration for now
-    static const system_clock::time_point ZERO_TIMESTAMP{milliseconds(0)};
-    static const milliseconds DEFAULT_DURATION{500};
+    static const milliseconds DEFAULT_NOTE_DURATION{500};
+    static const milliseconds DURATION_GAP{milliseconds(1)};
 
     if (!m_started)
     {
@@ -119,24 +119,31 @@ bool MusicSensorClient<TransportT>::onDataReading(
 
     // Normalize expired timestamps to now
     timestampMs = std::min(timestampMs, nowMs);
-    system_clock::time_point timestampPoint{timestampMs};
+    system_clock::time_point timestampPointOn{timestampMs};
+    auto timestampPointOff = timestampPointOn + DEFAULT_NOTE_DURATION;
 
-    // Cancel previous note off timer if it exists
+    // Adjust previous note off timer if necessary
+    // This is guaranteed to work only if message timestamps always increase
     auto prevNoteOffTimer = m_noteOffTimers[midiNote].lock();
     if (prevNoteOffTimer)
     {
-        prevNoteOffTimer->expires_at(ZERO_TIMESTAMP);
+        auto prevNoteOffExpire = prevNoteOffTimer->expires_at();
+        if (timestampPointOn < prevNoteOffExpire)
+        {
+            prevNoteOffTimer->expires_at(prevNoteOffExpire - DURATION_GAP);
+        }
     }
 
     // Set up new timers
-    auto onTimer = std::make_shared<asio::system_timer>(m_asio, timestampPoint);
-    auto offTimer = std::make_shared<asio::system_timer>(
-        m_asio, timestampPoint + DEFAULT_DURATION);
+    auto onTimer =
+        std::make_shared<asio::system_timer>(m_asio, timestampPointOn);
     onTimer->async_wait(
         [this, onTimer, midiNote, velocity](const asio::error_code &)
         {
             midiNoteOn(midiNote, velocity);
         });
+    auto offTimer =
+        std::make_shared<asio::system_timer>(m_asio, timestampPointOff);
     offTimer->async_wait([this, offTimer, midiNote](const asio::error_code &)
                          {
                              midiNoteOff(midiNote, DEFAULT_VELOCITY);

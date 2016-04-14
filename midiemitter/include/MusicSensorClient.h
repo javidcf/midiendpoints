@@ -6,6 +6,7 @@
 #include <MidiEndpointCommon.h>
 
 #include <asio.hpp>
+#include <asio/system_timer.hpp>
 #include <bsf/SensorClient.h>
 #include <log4cxx/logger.h>
 #include <RtMidi.h>
@@ -13,6 +14,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <thread>
 
 namespace midiendpoints
@@ -128,6 +130,8 @@ private:
     std::unique_ptr<asio::io_service::work> m_work;
     //! ASIO thread
     std::thread m_asioThread;
+    //! A map storing initiated note-off timers
+    std::unordered_map<int, std::weak_ptr<asio::system_timer>> m_noteOffTimers;
     //! Whether the retransmitter has been started
     bool m_started;
 

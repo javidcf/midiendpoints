@@ -4,8 +4,6 @@
 
 #include "../MusicSensorClient.h"
 
-#include <asio/system_timer.hpp>
-
 #include <algorithm>
 #include <chrono>
 #include <vector>
@@ -28,6 +26,7 @@ MusicSensorClient<TransportT>::MusicSensorClient(
 , m_asio()
 , m_work()
 , m_asioThread()
+, m_noteOffTimers()
 , m_started{false}
 {
 }
@@ -92,6 +91,7 @@ bool MusicSensorClient<TransportT>::onDataReading(
     using namespace std::chrono;
 
     // 500ms of note duration for now
+    static const system_clock::time_point ZERO_TIMESTAMP{milliseconds(0)};
     static const milliseconds DEFAULT_DURATION{500};
 
     if (!m_started)
@@ -103,11 +103,11 @@ bool MusicSensorClient<TransportT>::onDataReading(
     auto now = system_clock::now().time_since_epoch();
     auto nowMs = duration_cast<milliseconds>(now);
 
-    LOG4CXX_DEBUG(logger(),
-                  "Received message:\n" << reading->ShortDebugString())
+    LOG4CXX_DEBUG(logger(), "Received message:\n"
+                                << reading->ShortDebugString())
 
     // Read message data
-    milliseconds timestampMs(reading->timestamp());
+    milliseconds timestampMs{reading->timestamp()};
     const masmusic::Pitch &pitch = reading->pitch();
     unsigned char midiNote = pitchToMidi(pitch);
     if (reading->velocity() >= 128)
@@ -121,7 +121,14 @@ bool MusicSensorClient<TransportT>::onDataReading(
     timestampMs = std::min(timestampMs, nowMs);
     system_clock::time_point timestampPoint{timestampMs};
 
-    // Set up timers
+    // Cancel previous note off timer if it exists
+    auto prevNoteOffTimer = m_noteOffTimers[midiNote].lock();
+    if (prevNoteOffTimer)
+    {
+        prevNoteOffTimer->expires_at(ZERO_TIMESTAMP);
+    }
+
+    // Set up new timers
     auto onTimer = std::make_shared<asio::system_timer>(m_asio, timestampPoint);
     auto offTimer = std::make_shared<asio::system_timer>(
         m_asio, timestampPoint + DEFAULT_DURATION);
@@ -134,6 +141,7 @@ bool MusicSensorClient<TransportT>::onDataReading(
                          {
                              midiNoteOff(midiNote, DEFAULT_VELOCITY);
                          });
+    m_noteOffTimers[midiNote] = offTimer;
 
     return true;
 }

@@ -26,7 +26,7 @@ MusicSensorClient<TransportT>::MusicSensorClient(
 , m_asio()
 , m_work()
 , m_asioThread()
-, m_noteOffTimers()
+, m_startedNotes()
 , m_started{false}
 {
 }
@@ -92,7 +92,6 @@ bool MusicSensorClient<TransportT>::onDataReading(
 
     // 500ms of note duration for now
     static const milliseconds DEFAULT_NOTE_DURATION{500};
-    static const milliseconds DURATION_GAP{milliseconds(1)};
 
     if (!m_started)
     {
@@ -117,22 +116,10 @@ bool MusicSensorClient<TransportT>::onDataReading(
     auto velocity =
         static_cast<unsigned char>(std::min(reading->velocity(), 127u));
 
-    // Normalize expired timestamps to now
+    // Normalize expired start timestamp to now
     timestampMs = std::min(timestampMs, nowMs);
     system_clock::time_point timestampPointOn{timestampMs};
     auto timestampPointOff = timestampPointOn + DEFAULT_NOTE_DURATION;
-
-    // Adjust previous note off timer if necessary
-    // This is guaranteed to work only if message timestamps always increase
-    auto prevNoteOffTimer = m_noteOffTimers[midiNote].lock();
-    if (prevNoteOffTimer)
-    {
-        auto prevNoteOffExpire = prevNoteOffTimer->expires_at();
-        if (timestampPointOn < prevNoteOffExpire)
-        {
-            prevNoteOffTimer->expires_at(prevNoteOffExpire - DURATION_GAP);
-        }
-    }
 
     // Set up new timers
     auto onTimer =
@@ -140,15 +127,26 @@ bool MusicSensorClient<TransportT>::onDataReading(
     onTimer->async_wait(
         [this, onTimer, midiNote, velocity](const asio::error_code &)
         {
+            // Stop any previously playing notes
+            if (m_startedNotes[midiNote].lock())
+            {
+                midiNoteOff(midiNote, DEFAULT_VELOCITY);
+            }
+            // Start note and save this timer as initiator
+            m_startedNotes[midiNote] = onTimer;
             midiNoteOn(midiNote, velocity);
         });
     auto offTimer =
         std::make_shared<asio::system_timer>(m_asio, timestampPointOff);
-    offTimer->async_wait([this, offTimer, midiNote](const asio::error_code &)
-                         {
-                             midiNoteOff(midiNote, DEFAULT_VELOCITY);
-                         });
-    m_noteOffTimers[midiNote] = offTimer;
+    offTimer->async_wait(
+        [this, onTimer, offTimer, midiNote](const asio::error_code &)
+        {
+            // Switch off note if it was initiated by this onTimer
+            if (m_startedNotes[midiNote].lock() == onTimer)
+            {
+                midiNoteOff(midiNote, DEFAULT_VELOCITY);
+            }
+        });
 
     return true;
 }

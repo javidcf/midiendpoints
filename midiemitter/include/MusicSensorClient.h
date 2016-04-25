@@ -130,8 +130,8 @@ private:
     std::unique_ptr<asio::io_service::work> m_work;
     //! ASIO thread
     std::thread m_asioThread;
-    //! A map storing initiated note-off timers
-    std::unordered_map<int, std::weak_ptr<asio::system_timer>> m_noteOffTimers;
+    //! A map storing timers that started a note
+    std::unordered_map<int, std::weak_ptr<asio::system_timer>> m_startedNotes;
     //! Whether the retransmitter has been started
     bool m_started;
 

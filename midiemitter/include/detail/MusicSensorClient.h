@@ -117,7 +117,7 @@ bool MusicSensorClient<TransportT>::onDataReading(
         static_cast<unsigned char>(std::min(reading->velocity(), 127u));
 
     // Normalize expired start timestamp to now
-    timestampMs = std::min(timestampMs, nowMs);
+    timestampMs = std::max(timestampMs, nowMs);
     system_clock::time_point timestampPointOn{timestampMs};
     auto timestampPointOff = timestampPointOn + DEFAULT_NOTE_DURATION;
 

@@ -4,7 +4,6 @@
 
 #include "../MusicSensor.h"
 
-#include <chrono>
 #include <istream>
 
 namespace midiendpoints
@@ -16,12 +15,19 @@ log4cxx::LoggerPtr
 
 template <typename TransportT>
 MusicSensor<TransportT>::MusicSensor(
-    const TransportT &transport, const typename TransportT::Channel &channel,
+    const TransportT &transport,
+    const typename TransportT::Channel &channelInstant,
+    const typename TransportT::Channel &channelSpanned,
     const std::string &midiClientName)
-: MusicSensorParent<TransportT>(transport, channel)
+: m_sensorInstant(transport, channelInstant)
+, m_sensorSpanned(transport, channelSpanned)
 , m_midiIn(MIDI_API, midiClientName)
-, m_midiParserStatus{MidiParserStatus::WAITING_ON}
-, m_reading{MusicSensorParent<TransportT>::newDataReading()}
+, m_midiNoteEvent(MidiNoteEvent::NONE)
+, m_midiParserStatus{MidiParserStatus::WAITING}
+, m_readingInstant{m_sensorInstant.newDataReading()}
+, m_readingSpanned{m_sensorSpanned.newDataReading()}
+, m_currentPitch{0}
+, m_startedNotes()
 , m_started{false}
 {
 }
@@ -74,7 +80,7 @@ void MusicSensor<TransportT>::stop()
 
 template <typename TransportT>
 void MusicSensor<TransportT>::midiEventReceived(
-    double /*midiTimeStamp*/, std::vector<unsigned char> *message,
+    double /*midiTimestamp*/, std::vector<unsigned char> *message,
     void * /*userData*/)
 {
     using namespace std::chrono;
@@ -82,74 +88,107 @@ void MusicSensor<TransportT>::midiEventReceived(
     LOG4CXX_DEBUG(logger(), "MIDI event received (" << message->size()
                                                     << " bytes)")
 
-    for (auto b : *message) {
-        switch (m_midiParserStatus)
+    for (auto messageByte : *message) {
+        // All this would probably be better done with a proper FSM
+        if ((messageByte & 0x80) != 0)
         {
-        case MidiParserStatus::WAITING_ON:
-            if ((b & 0xF0) == 0x90)
+            // Status byte
+            if ((messageByte & 0xF0) == 0x80)
             {
-                m_midiParserStatus = MidiParserStatus::WAITING_NOTE;
+                m_midiNoteEvent = MidiNoteEvent::OFF;
+                m_midiParserStatus = MidiParserStatus::NOTE;
             }
-            break;
-        case MidiParserStatus::WAITING_NOTE:
-            if ((b & 0x80) != 0)
+            else if ((messageByte & 0xF0) == 0x90)
             {
-                if ((b & 0xF0) == 0x90)
-                {
-                    m_midiParserStatus = MidiParserStatus::WAITING_NOTE;
-                }
-                else
-                {
-                    m_midiParserStatus = MidiParserStatus::WAITING_ON;
-                }
+                m_midiNoteEvent = MidiNoteEvent::ON;
+                m_midiParserStatus = MidiParserStatus::NOTE;
             }
             else
             {
-                midiToPitch(b, m_reading->mutable_pitch());
-                m_midiParserStatus = MidiParserStatus::WAITING_VELOCITY;
+                m_midiNoteEvent = MidiNoteEvent::NONE;
+                m_midiParserStatus = MidiParserStatus::WAITING;
             }
-            break;
-        case MidiParserStatus::WAITING_VELOCITY:
-            if ((b & 0x80) != 0)
+        }
+        else if (m_midiNoteEvent != MidiNoteEvent::NONE)
+        {
+            // Data byte
+            switch (m_midiParserStatus)
             {
-                LOG4CXX_WARN(logger(), "Unexpected MIDI status message")
-                if ((b & 0xF0) == 0x90)
-                {
-                    m_midiParserStatus = MidiParserStatus::WAITING_NOTE;
-                }
-                else
-                {
-                    m_midiParserStatus = MidiParserStatus::WAITING_ON;
-                }
+            case MidiParserStatus::NOTE:
+            {
+                m_currentPitch = messageByte;
+                m_midiParserStatus = MidiParserStatus::VELOCITY;
+                break;
             }
-            else
+            case MidiParserStatus::VELOCITY:
             {
                 // Get time stamp
-                auto timeStamp = system_clock::now().time_since_epoch();
-                auto timeStampMs =
-                    duration_cast<milliseconds>(timeStamp).count();
+                auto timestamp = system_clock::now();
+                auto timestampMs = duration_cast<milliseconds>(
+                                       timestamp.time_since_epoch()).count();
 
-                m_reading->set_velocity(b);
-                m_reading->set_timestamp(timeStampMs);
-                LOG4CXX_DEBUG(logger(), "Publishing message:\n"
-                                            << m_reading->ShortDebugString())
-                MusicSensorParent<TransportT>::publish(m_reading);
+                // Send spanned event on OFF or repeated ON
+                auto previous = m_startedNotes.find(m_currentPitch);
+                if ((m_midiNoteEvent == MidiNoteEvent::OFF) ||
+                    (previous != m_startedNotes.end()))
+                {
+                    // Compute note timestamp and duration in milliseconds
+                    auto previousTimestamp = previous->second.timestamp;
+                    auto previousMs =
+                        duration_cast<milliseconds>(
+                            previousTimestamp.time_since_epoch()).count();
+                    auto durationMs =
+                        static_cast<unsigned int>(timestampMs - previousMs);
+                    // Fill spanned reading data
+                    auto previousVelocity = previous->second.velocity;
+                    midiToPitch(m_currentPitch,
+                                m_readingSpanned->mutable_pitch());
+                    m_readingSpanned->set_timestamp(previousMs);
+                    m_readingSpanned->set_velocity(previousVelocity);
+                    m_readingSpanned->set_duration(durationMs);
+                    // Remove previous onset
+                    m_startedNotes.erase(previous);
+                    // Publish message
+                    LOG4CXX_DEBUG(logger(),
+                                  "Publishing spanned message:\n"
+                                      << m_readingSpanned->ShortDebugString())
+                    m_sensorSpanned.publish(m_readingSpanned);
+                }
 
-                m_midiParserStatus = MidiParserStatus::WAITING_NOTE;
+                if (m_midiNoteEvent == MidiNoteEvent::ON)
+                {
+                    // Fill instant reading data
+                    midiToPitch(m_currentPitch,
+                                m_readingInstant->mutable_pitch());
+                    m_readingInstant->set_timestamp(timestampMs);
+                    m_readingInstant->set_velocity(messageByte);
+                    // Save onset data
+                    m_startedNotes[m_currentPitch] = {timestamp, messageByte};
+                    // Publish message
+                    LOG4CXX_DEBUG(logger(),
+                                  "Publishing instant message:\n"
+                                      << m_readingInstant->ShortDebugString())
+                    m_sensorInstant.publish(m_readingInstant);
+                }
+
+                m_midiParserStatus = MidiParserStatus::NOTE;
+                break;
             }
-            break;
+            default:
+                LOG4CXX_WARN(LOG, "Inconsistent MIDI parser status")
+            }
         }
     }
 }
 
 template <typename TransportT>
 void MusicSensor<TransportT>::forwardMidiCallback(
-    double timeStamp, std::vector<unsigned char> *message, void *userData)
+    double timestamp, std::vector<unsigned char> *message, void *userData)
 {
     auto retransmitter = static_cast<MusicSensor<TransportT> *>(userData);
     if (retransmitter)
     {
-        retransmitter->midiEventReceived(timeStamp, message, userData);
+        retransmitter->midiEventReceived(timestamp, message, userData);
     }
     else
     {

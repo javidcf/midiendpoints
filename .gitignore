@@ -31,6 +31,9 @@
 build*/
 bin/
 
+# Documentation files
+doc/
+
 # Sublime Text workspace
 *.sublime-workspace
 

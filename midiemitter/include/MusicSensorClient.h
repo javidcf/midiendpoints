@@ -131,7 +131,8 @@ private:
     //! ASIO thread
     std::thread m_asioThread;
     //! A map storing timers that started a note
-    std::unordered_map<int, std::weak_ptr<asio::system_timer>> m_startedNotes;
+    std::unordered_map<unsigned char, std::weak_ptr<asio::system_timer>>
+        m_startedNotes;
     //! Whether the retransmitter has been started
     bool m_started;
 

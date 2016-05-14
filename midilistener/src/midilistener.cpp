@@ -10,14 +10,16 @@
 
 static const char *DEFAULT_SERVER = "localhost";
 static const unsigned int DEFAULT_PORT = 1883;
-static const char *DEFAULT_TOPIC = "music";
+static const char *DEFAULT_TOPIC_INSTANT = "music-instant";
+static const char *DEFAULT_TOPIC_SPANNED = "music-spanned";
 static const char *DEFAULT_CLIENT_NAME = "midilistener";
 
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("midilistener"));
 
 bool parseOptions(int argc, char *argv[], std::string &mqttServer,
-                  unsigned int &mqttPort, std::string &mqttTopic,
-                  std::string &clientName, bool &debug);
+                  unsigned int &mqttPort, std::string &mqttTopicInstant,
+                  std::string &mqttTopicSpanned, std::string &clientName,
+                  bool &debug);
 
 int main(int argc, char *argv[])
 {
@@ -26,11 +28,12 @@ int main(int argc, char *argv[])
     std::string mqttServer;
     unsigned int mqttPort;
     std::string clientName;
-    std::string mqttTopic;
+    std::string mqttTopicInstant;
+    std::string mqttTopicSpanned;
     bool debug;
 
-    if (!parseOptions(argc, argv, mqttServer, mqttPort, mqttTopic, clientName,
-                      debug))
+    if (!parseOptions(argc, argv, mqttServer, mqttPort, mqttTopicInstant,
+                      mqttTopicSpanned, clientName, debug))
     {
         return 0;
     }
@@ -41,8 +44,8 @@ int main(int argc, char *argv[])
     {
         bsf::AsyncMqttTransport transport(clientName, mqttServer, mqttPort,
                                           MQTT_QOS);
-        MusicSensor<bsf::AsyncMqttTransport> sensor(transport, mqttTopic,
-                                                    clientName);
+        MusicSensor<bsf::AsyncMqttTransport> sensor(
+            transport, mqttTopicInstant, mqttTopicSpanned, clientName);
 
         transport.start();
         sensor.start();
@@ -64,8 +67,9 @@ int main(int argc, char *argv[])
 }
 
 bool parseOptions(int argc, char *argv[], std::string &mqttServer,
-                  unsigned int &mqttPort, std::string &mqttTopic,
-                  std::string &clientName, bool &debug)
+                  unsigned int &mqttPort, std::string &mqttTopicInstant,
+                  std::string &mqttTopicSpanned, std::string &clientName,
+                  bool &debug)
 {
     namespace po = boost::program_options;
 
@@ -74,7 +78,8 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
 
         std::string server;
         unsigned int port;
-        std::string topic;
+        std::string topicInstant;
+        std::string topicSpanned;
         std::string name;
         bool debugFlag;
 
@@ -84,7 +89,8 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
             ("help,h", "show help")
             ("server,s", po::value<std::string>(&server)->default_value(DEFAULT_SERVER), "server address or host name")
             ("port,p", po::value<unsigned int>(&port)->default_value(DEFAULT_PORT), "server port")
-            ("topic,t", po::value<std::string>(&topic)->default_value(DEFAULT_TOPIC), "MQTT topic")
+            ("topic-instant,ti", po::value<std::string>(&topicInstant)->default_value(DEFAULT_TOPIC_INSTANT), "MQTT topic for instant messages")
+            ("topic-spanned,ts", po::value<std::string>(&topicSpanned)->default_value(DEFAULT_TOPIC_SPANNED), "MQTT topic for spanned message")
             ("name,n", po::value<std::string>(&name)->default_value(DEFAULT_CLIENT_NAME), "MQTT and MIDI client name")
             ("debug,d", po::bool_switch(&debugFlag),"print debug messages");
         // clang-format on
@@ -101,7 +107,8 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
 
         mqttServer = server;
         mqttPort = port;
-        mqttTopic = topic;
+        mqttTopicInstant = topicInstant;
+        mqttTopicSpanned = topicSpanned;
         clientName = name;
         debug = debugFlag;
 

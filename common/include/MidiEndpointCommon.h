@@ -49,10 +49,16 @@ const bool MQTT_RETAIN = false;
 
 //! Reading type
 #ifdef USE_PROTOBUF_V3
+typedef bsf::ProtobufPtrDataReading<masmusic::TimePointNote> TimePointNoteReading;
+typedef bsf::ProtobufArenaDataReadingFactory<masmusic::TimePointNote>
+    TimePointNoteReadingFactory;
 typedef bsf::ProtobufPtrDataReading<masmusic::TimeSpanNote> TimeSpanNoteReading;
 typedef bsf::ProtobufArenaDataReadingFactory<masmusic::TimeSpanNote>
     TimeSpanNoteReadingFactory;
 #else
+typedef bsf::ProtobufDataReading<masmusic::TimePointNote> TimePointNoteReading;
+typedef bsf::DefaultDataReadingFactory<masmusic::TimePointNote>
+    TimePointNoteReadingFactory;
 typedef bsf::ProtobufDataReading<masmusic::TimeSpanNote> TimeSpanNoteReading;
 typedef bsf::DefaultDataReadingFactory<masmusic::TimeSpanNote>
     TimeSpanNoteReadingFactory;
@@ -60,8 +66,10 @@ typedef bsf::DefaultDataReadingFactory<masmusic::TimeSpanNote>
 
 //! Serializer type
 #ifdef USE_BASE64
+typedef bsf::Base64Serializer<TimePointNoteReading> TimePointNoteSerializer;
 typedef bsf::Base64Serializer<TimeSpanNoteReading> TimeSpanNoteSerializer;
 #else
+typedef bsf::DefaultSerializer<TimePointNoteReading> TimePointNoteSerializer;
 typedef bsf::DefaultSerializer<TimeSpanNoteReading> TimeSpanNoteSerializer;
 #endif
 

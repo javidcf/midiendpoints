@@ -90,9 +90,6 @@ bool MusicSensorClient<TransportT>::onDataReading(
 {
     using namespace std::chrono;
 
-    // 500ms of note duration for now
-    static const milliseconds DEFAULT_NOTE_DURATION{500};
-
     if (!m_started)
     {
         return true;
@@ -119,7 +116,8 @@ bool MusicSensorClient<TransportT>::onDataReading(
     // Normalize expired start timestamp to now
     timestampMs = std::max(timestampMs, nowMs);
     system_clock::time_point timestampPointOn{timestampMs};
-    auto timestampPointOff = timestampPointOn + DEFAULT_NOTE_DURATION;
+    auto timestampPointOff =
+        timestampPointOn + milliseconds{reading->duration()};
 
     // Set up new timers
     auto onTimer =

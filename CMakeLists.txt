@@ -45,7 +45,6 @@ if (USE_BASE64)
     add_definitions (-DUSE_BASE64)
 endif ()
 
-set(Common_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/common/include;${CMAKE_BINARY_DIR}")
-
+add_subdirectory (common)
 add_subdirectory (midilistener)
 add_subdirectory (midiemitter)

@@ -9,16 +9,22 @@
 #include <log4cxx/logger.h>
 #include <RtMidi.h>
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 
 namespace midiendpoints
 {
 
 template <typename TransportT>
-using MusicSensorParent =
+using TimePointNoteSensor =
+    bsf::Sensor<TransportT, TimePointNoteReading, TimePointNoteSerializer,
+                TimePointNoteReadingFactory>;
+template <typename TransportT>
+using TimeSpanNoteSensor =
     bsf::Sensor<TransportT, TimeSpanNoteReading, TimeSpanNoteSerializer,
                 TimeSpanNoteReadingFactory>;
 
@@ -26,12 +32,16 @@ using MusicSensorParent =
 //! \brief Retransmits music messages to a BSF network.
 //!
 //! Music messages are received through a Jack MIDI port and retransmitted
-//! into a BSF network in a protocol buffers message.
+//! into a BSF network in a protocol buffers message. The sensor retransmits
+//! two kinds of messages: instantaneous note events, which are emitted when a
+//! note starts, and spanned note events, which are emitted when the note
+//! finishes, and include the duration. Each kind of even can be published to
+//! a different channel.
 //!
 //! \tparam TransportT BSF transport type
 //!
 template <typename TransportT>
-class MusicSensor : private MusicSensorParent<TransportT>
+class MusicSensor
 {
 public:
     //! BSF transport type
@@ -41,11 +51,13 @@ public:
     //! \brief Constructor.
     //!
     //! \param transport BSF transport
-    //! \param channel BSF transport channel
+    //! \param channelInstant BSF transport channel for instantaneous events
+    //! \param channelSpanned BSF transport channel for spanned events
     //! \param midiClientName MIDI client identifier
     //!
     MusicSensor(const Transport &transport,
-                const typename Transport::Channel &channel,
+                const typename Transport::Channel &channelInstant,
+                const typename Transport::Channel &channelSpanned,
                 const std::string &midiClientName);
 
     //!
@@ -70,30 +82,55 @@ public:
     //!
     //! \brief Callback for new MIDI events.
     //!
-    //! \param midiTimeStamp time stamp of the MIDI event
+    //! \param midiTimestamp time stamp of the MIDI event
     //! \param message MIDI event data
     //! \param userData user data given in the callback binding
     //!
-    void midiEventReceived(double midiTimeStamp,
+    void midiEventReceived(double midiTimestamp,
                            std::vector<unsigned char> *message, void *userData);
 
 private:
+    enum class MidiNoteEvent
+    {
+        NONE,
+        OFF,
+        ON
+    };
     enum class MidiParserStatus
     {
-        WAITING_ON,
-        WAITING_NOTE,
-        WAITING_VELOCITY
+        WAITING,
+        NOTE,
+        VELOCITY
     };
 
+    //! \brief Note start data.
+    struct Onset
+    {
+        std::chrono::time_point<std::chrono::system_clock> timestamp;
+        unsigned char velocity;
+    };
+
+    //! Sensor for instantaneous events
+    TimePointNoteSensor<TransportT> m_sensorInstant;
+    //! Sensor for spanned events
+    TimeSpanNoteSensor<TransportT> m_sensorSpanned;
     //! MIDI input
     RtMidiIn m_midiIn;
     //! Midi client name
     std::string m_midiClientName;
+    //! Current MIDI note event
+    MidiNoteEvent m_midiNoteEvent;
     //! Current MIDI parsing status
     MidiParserStatus m_midiParserStatus;
-    //! Reused reading object
-    TimeSpanNoteReading m_reading;
-    //! Whether the retransmitter has been started
+    //! Reused instantaneous reading object
+    TimePointNoteReading m_readingInstant;
+    //! Reused spanned reading object
+    TimeSpanNoteReading m_readingSpanned;
+    //! Current MIDI pitch value
+    unsigned char m_currentPitch;
+    //! Map to keep track of event start timestamps and velocites
+    std::unordered_map<unsigned char, Onset> m_startedNotes;
+   //! Whether the retransmitter has been started
     bool m_started;
 
     //! Class logger
@@ -110,11 +147,11 @@ private:
     //! This is a wrapper for the member callback function, since RtMidi does
     //! not allow to use bound functions as callback.
     //!
-    //! \param timeStamp time stamp of the MIDI event
+    //! \param timestamp time stamp of the MIDI event
     //! \param message MIDI event data
     //! \param userData a valid pointer to a MusicSensor
     //!
-    static void forwardMidiCallback(double timeStamp,
+    static void forwardMidiCallback(double timestamp,
                                     std::vector<unsigned char> *message,
                                     void *userData);
 };

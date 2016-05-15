@@ -89,8 +89,8 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
             ("help,h", "show help")
             ("server,s", po::value<std::string>(&server)->default_value(DEFAULT_SERVER), "server address or host name")
             ("port,p", po::value<unsigned int>(&port)->default_value(DEFAULT_PORT), "server port")
-            ("topic-instant,ti", po::value<std::string>(&topicInstant)->default_value(DEFAULT_TOPIC_INSTANT), "MQTT topic for instant messages")
-            ("topic-spanned,ts", po::value<std::string>(&topicSpanned)->default_value(DEFAULT_TOPIC_SPANNED), "MQTT topic for spanned message")
+            ("topic-instant,t", po::value<std::string>(&topicInstant)->default_value(DEFAULT_TOPIC_INSTANT), "MQTT topic for instant messages")
+            ("topic-spanned,r", po::value<std::string>(&topicSpanned)->default_value(DEFAULT_TOPIC_SPANNED), "MQTT topic for spanned messages")
             ("name,n", po::value<std::string>(&name)->default_value(DEFAULT_CLIENT_NAME), "MQTT and MIDI client name")
             ("debug,d", po::bool_switch(&debugFlag),"print debug messages");
         // clang-format on

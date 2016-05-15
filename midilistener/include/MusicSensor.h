@@ -103,6 +103,9 @@ private:
         VELOCITY
     };
 
+    //! Maximum acceptable ON/OFF event distance
+    static const unsigned int MAX_DURATION{5000};
+
     //! \brief Note start data.
     struct Onset
     {

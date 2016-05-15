@@ -127,10 +127,9 @@ void MusicSensor<TransportT>::midiEventReceived(
                 auto timestampMs = duration_cast<milliseconds>(
                                        timestamp.time_since_epoch()).count();
 
-                // Send spanned event on OFF or repeated ON
+                // Either ON or OFF, send spanned event if pitch was ON
                 auto previous = m_startedNotes.find(m_currentPitch);
-                if ((m_midiNoteEvent == MidiNoteEvent::OFF) ||
-                    (previous != m_startedNotes.end()))
+                if (previous != m_startedNotes.end())
                 {
                     // Compute note timestamp and duration in milliseconds
                     auto previousTimestamp = previous->second.timestamp;
@@ -148,11 +147,15 @@ void MusicSensor<TransportT>::midiEventReceived(
                     m_readingSpanned->set_duration(durationMs);
                     // Remove previous onset
                     m_startedNotes.erase(previous);
-                    // Publish message
-                    LOG4CXX_DEBUG(logger(),
-                                  "Publishing spanned message:\n"
-                                      << m_readingSpanned->ShortDebugString())
-                    m_sensorSpanned.publish(m_readingSpanned);
+                    if (durationMs <= MAX_DURATION)
+                    {
+                        // Publish message
+                        LOG4CXX_DEBUG(
+                            logger(),
+                            "Publishing spanned message:\n"
+                                << m_readingSpanned->ShortDebugString())
+                        m_sensorSpanned.publish(m_readingSpanned);
+                    }
                 }
 
                 if (m_midiNoteEvent == MidiNoteEvent::ON)

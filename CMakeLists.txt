@@ -14,7 +14,7 @@ endif()
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${warnings}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${warnings}")
 
-set(USE_BASE64 ON CACHE BOOL "Whether to use Base64 encoding")
+set(USE_BASE64 OFF CACHE BOOL "Whether to use Base64 encoding")
 
 # Dependencies
 # Versions are not being properly set right now...

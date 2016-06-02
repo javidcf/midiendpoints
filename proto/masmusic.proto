@@ -6,7 +6,7 @@ package masmusic;
 option java_generate_equals_and_hash = true;
 option java_multiple_files = true;
 option java_outer_classname = "MasMusicProto";
-option java_package = "uk.ac.bath.masmusic";
+option java_package = "uk.ac.bath.masmusic.protobuf";
 
 enum Note
 {
@@ -51,4 +51,21 @@ message TimeSpanNote
     optional Pitch pitch = 2;
     optional uint32 velocity = 3;  // Velocity value, should be in the range 0-127
     optional uint32 duration = 4;  // Note duration
+}
+
+message Beat
+{
+    optional int32 duration = 1;  // Beat duration (ms)
+    optional int32 phase = 2;     // Beat phase (ms)
+}
+
+message Scale
+{
+    optional Note fundamental = 1;  // Scale fundamental
+    optional string type = 2;       // Scale type name
+}
+
+message Direction {
+    optional Beat beat = 1;
+    optional Scale scale = 2;
 }

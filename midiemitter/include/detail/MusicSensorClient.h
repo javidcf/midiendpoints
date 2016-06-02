@@ -51,7 +51,7 @@ void MusicSensorClient<TransportT>::start()
 
         // MIDI output
         LOG4CXX_DEBUG(logger(), "Opening MIDI port...")
-        m_midiOut.openPort(0, "midi_out");
+        m_midiOut.openVirtualPort("midi_out");
         midiSetProgram();
 
         m_started = true;

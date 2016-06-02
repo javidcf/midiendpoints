@@ -50,7 +50,7 @@ void MusicSensor<TransportT>::start()
         }
 
         // MIDI input
-        m_midiIn.openPort(0, "midi_in");
+        m_midiIn.openVirtualPort("midi_in");
         m_midiIn.setCallback(MusicSensor<TransportT>::forwardMidiCallback,
                              this);
         // midiin->ignoreTypes( false, false, false );

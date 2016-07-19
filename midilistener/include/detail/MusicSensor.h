@@ -158,7 +158,7 @@ void MusicSensor<TransportT>::midiEventReceived(
                     }
                 }
 
-                if (m_midiNoteEvent == MidiNoteEvent::ON)
+                if (m_midiNoteEvent == MidiNoteEvent::ON && messageByte > 0)
                 {
                     // Fill instant reading data
                     midiToPitch(m_currentPitch,

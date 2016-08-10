@@ -21,6 +21,7 @@ MusicSensorClient<TransportT>::MusicSensorClient(
     const std::string &midiClientName)
 : MusicSensorClientParent<TransportT>(transport, channel)
 , m_midiOut(MIDI_API, midiClientName)
+, m_midiClientName{midiClientName}
 , m_midiChannel{0}
 , m_midiProgram{0}
 , m_asio()
@@ -63,6 +64,11 @@ void MusicSensorClient<TransportT>::start()
                                    });
 
         LOG4CXX_INFO(logger(), "Music sensor client started")
+        LOG4CXX_INFO(logger(), "Subscribed to music events in MQTT channel '"
+                                    << MusicSensorClientParent<TransportT>::getChannel()
+                                    << "'")
+        LOG4CXX_INFO(logger(), "Playing on Jack port '" << m_midiClientName
+                                    << ":midi_out'")
     }
     else
     {

@@ -51,13 +51,13 @@ public:
     //! \brief Constructor.
     //!
     //! \param transport BSF transport
-    //! \param channelInstant BSF transport channel for instantaneous events
     //! \param channelSpanned BSF transport channel for spanned events
+    //! \param channelInstant BSF transport channel for instantaneous events
     //! \param midiClientName MIDI client identifier
     //!
     MusicSensor(const Transport &transport,
-                const typename Transport::Channel &channelInstant,
                 const typename Transport::Channel &channelSpanned,
+                const typename Transport::Channel &channelInstant,
                 const std::string &midiClientName);
 
     //!
@@ -113,22 +113,22 @@ private:
         unsigned char velocity;
     };
 
-    //! Sensor for instantaneous events
-    TimePointNoteSensor<TransportT> m_sensorInstant;
     //! Sensor for spanned events
     TimeSpanNoteSensor<TransportT> m_sensorSpanned;
+    //! Sensor for instantaneous events
+    TimePointNoteSensor<TransportT> m_sensorInstant;
     //! MIDI input
     RtMidiIn m_midiIn;
-    //! Midi client name
+    //! MIDI client name
     std::string m_midiClientName;
     //! Current MIDI note event
     MidiNoteEvent m_midiNoteEvent;
     //! Current MIDI parsing status
     MidiParserStatus m_midiParserStatus;
-    //! Reused instantaneous reading object
-    TimePointNoteReading m_readingInstant;
     //! Reused spanned reading object
     TimeSpanNoteReading m_readingSpanned;
+    //! Reused instantaneous reading object
+    TimePointNoteReading m_readingInstant;
     //! Current MIDI pitch value
     unsigned char m_currentPitch;
     //! Map to keep track of event start timestamps and velocites

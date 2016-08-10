@@ -16,16 +16,17 @@ log4cxx::LoggerPtr
 template <typename TransportT>
 MusicSensor<TransportT>::MusicSensor(
     const TransportT &transport,
-    const typename TransportT::Channel &channelInstant,
     const typename TransportT::Channel &channelSpanned,
+    const typename TransportT::Channel &channelInstant,
     const std::string &midiClientName)
-: m_sensorInstant(transport, channelInstant)
-, m_sensorSpanned(transport, channelSpanned)
+: m_sensorSpanned(transport, channelSpanned)
+, m_sensorInstant(transport, channelInstant)
 , m_midiIn(MIDI_API, midiClientName)
+, m_midiClientName{midiClientName}
 , m_midiNoteEvent(MidiNoteEvent::NONE)
 , m_midiParserStatus{MidiParserStatus::WAITING}
-, m_readingInstant{m_sensorInstant.newDataReading()}
 , m_readingSpanned{m_sensorSpanned.newDataReading()}
+, m_readingInstant{m_sensorInstant.newDataReading()}
 , m_currentPitch{0}
 , m_startedNotes()
 , m_started{false}
@@ -58,6 +59,14 @@ void MusicSensor<TransportT>::start()
         m_started = true;
 
         LOG4CXX_INFO(logger(), "Music sensor started")
+        LOG4CXX_INFO(logger(), "Listening on Jack port '" << m_midiClientName
+                                    << ":midi_in'")
+        LOG4CXX_INFO(logger(), "Publishing music events on MQTT channel '"
+                                    << m_sensorSpanned.getChannel()
+                                    << "'")
+        LOG4CXX_INFO(logger(), "Publishing instant music events on MQTT channel '"
+                                    << m_sensorInstant.getChannel()
+                                    << "'")
     }
     else
     {

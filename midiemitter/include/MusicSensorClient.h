@@ -120,6 +120,8 @@ public:
 private:
     //! MIDI output
     RtMidiOut m_midiOut;
+    //! MIDI client name
+    std::string m_midiClientName;
     //! MIDI channel
     unsigned char m_midiChannel;
     //! MIDI program

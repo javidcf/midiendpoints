@@ -10,8 +10,8 @@
 
 static const char *DEFAULT_SERVER = "localhost";
 static const unsigned int DEFAULT_PORT = 1883;
+static const char *DEFAULT_TOPIC = "music";
 static const char *DEFAULT_TOPIC_INSTANT = "music-instant";
-static const char *DEFAULT_TOPIC_SPANNED = "music";
 static const char *DEFAULT_CLIENT_NAME = "midilistener";
 
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("midilistener"));
@@ -89,7 +89,7 @@ bool parseOptions(int argc, char *argv[], std::string &mqttServer,
             ("help,h", "show help")
             ("server,s", po::value<std::string>(&server)->default_value(DEFAULT_SERVER), "server address or host name")
             ("port,p", po::value<unsigned int>(&port)->default_value(DEFAULT_PORT), "server port")
-            ("topic,t", po::value<std::string>(&topic)->default_value(DEFAULT_TOPIC_SPANNED), "MQTT topic for music messages")
+            ("topic,t", po::value<std::string>(&topic)->default_value(DEFAULT_TOPIC), "MQTT topic for music messages")
             ("topic-instant,r", po::value<std::string>(&topicInstant)->default_value(DEFAULT_TOPIC_INSTANT), "MQTT topic for instant music messages")
             ("name,n", po::value<std::string>(&name)->default_value(DEFAULT_CLIENT_NAME), "MQTT and MIDI client name")
             ("debug,d", po::bool_switch(&debugFlag),"print debug messages");

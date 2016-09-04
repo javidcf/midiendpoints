@@ -11,11 +11,35 @@
 #include <log4cxx/logger.h>
 #include <RtMidi.h>
 
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <thread>
+
+namespace midiendpoints
+{
+struct InstrumentNote
+{
+    int8_t instrument;
+    int8_t note;
+    bool operator== (const InstrumentNote& other) const {
+        return this->instrument == other.instrument && this->note == other.note;
+    }
+};
+}
+
+namespace std {
+     template <> struct hash<midiendpoints::InstrumentNote>
+     {
+         size_t operator()(const midiendpoints::InstrumentNote &cn) const
+         {
+             return (cn.instrument << sizeof(cn.note)) + cn.note;
+         }
+     };
+}
+
 
 namespace midiendpoints
 {
@@ -71,61 +95,20 @@ public:
     //!
     void stop();
 
-    //!
-    //! \brief Get the MIDI channel in use.
-    //!
-    //! \return The MIDI channel
-    //!
-    unsigned char getMidiChannel() const
-    {
-        return m_midiChannel;
-    }
-
-    //!
-    //! \brief Set the MIDI channel in use.
-    //!
-    //! \param midiChannel The new MIDI channel
-    //!
-    void setMidiChannel(unsigned char midiChannel)
-    {
-        if (midiChannel >= 16)
-        {
-            throw std::runtime_error("Invalid MIDI channel value");
-        }
-        m_midiChannel = midiChannel;
-        setMidiProgram();
-    }
-
-    //!
-    //! \brief Get the MIDI program in use.
-    //!
-    //! \return The MIDI program
-    //!
-    unsigned char getMidiProgram() const
-    {
-        return m_midiProgram;
-    }
-
-    //!
-    //! \brief Set the MIDI program in use.
-    //!
-    //! \param midiProgram The new MIDI program
-    //!
-    void setMidiProgram(unsigned char midiProgram)
-    {
-        m_midiProgram = midiProgram;
-        setMidiProgram();
-    }
-
 private:
+
     //! MIDI output
     RtMidiOut m_midiOut;
     //! MIDI client name
     std::string m_midiClientName;
     //! MIDI channel
-    unsigned char m_midiChannel;
-    //! MIDI program
-    unsigned char m_midiProgram;
+    int8_t m_midiChannel;
+    //! Last used MIDI channel
+    int8_t m_lastUsedMidiChannel;
+    //! MIDI program on each channel
+    std::vector<int8_t> m_midiChannelProgram;
+    //! MIDI channel used by each program
+    std::vector<int8_t> m_programMidiChannel;
     //! ASIO service
     asio::io_service m_asio;
     //! ASIO work
@@ -133,7 +116,7 @@ private:
     //! ASIO thread
     std::thread m_asioThread;
     //! A map storing timers that started a note
-    std::unordered_map<unsigned char, std::weak_ptr<asio::system_timer>>
+    std::unordered_map<InstrumentNote, std::weak_ptr<asio::system_timer>>
         m_startedNotes;
     //! Whether the retransmitter has been started
     bool m_started;
@@ -160,8 +143,8 @@ private:
     //! \param midiNote MIDI note
     //! \param velocity Note velocity
     //!
-    void midiNoteOn(unsigned char midiNote,
-                    unsigned char velocity = DEFAULT_VELOCITY);
+    void midiNoteOn(int8_t midiNote,
+                    int8_t velocity = DEFAULT_VELOCITY);
 
     //!
     //! \brief Send a MIDI OFF message for a note.
@@ -169,11 +152,18 @@ private:
     //! \param midiNote MIDI note
     //! \param velocity Note velocity
     //!
-    void midiNoteOff(unsigned char midiNote,
-                     unsigned char velocity = DEFAULT_VELOCITY);
+    void midiNoteOff(int8_t midiNote,
+                     int8_t velocity = DEFAULT_VELOCITY);
 
     //!
-    //! \brief Set the currently selected program in the channel in use.
+    //! \brief Set the MIDI channel in use.
+    //!
+    //! \param program The new program
+    //!
+    void setProgram(uint8_t program);
+
+    //!
+    //! \brief Set the program for the channel in use.
     //!
     void midiSetProgram();
 };

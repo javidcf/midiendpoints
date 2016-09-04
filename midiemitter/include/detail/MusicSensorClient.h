@@ -23,7 +23,9 @@ MusicSensorClient<TransportT>::MusicSensorClient(
 , m_midiOut(MIDI_API, midiClientName)
 , m_midiClientName{midiClientName}
 , m_midiChannel{0}
-, m_midiProgram{0}
+, m_lastUsedMidiChannel{-1}
+, m_midiChannelProgram(16, 0)
+, m_programMidiChannel(128, -1)
 , m_asio()
 , m_work()
 , m_asioThread()
@@ -60,7 +62,10 @@ void MusicSensorClient<TransportT>::start()
         m_work.reset(new asio::io_service::work(m_asio));
         m_asioThread = std::thread([this]
                                    {
-                                       m_asio.run();
+                                       while (!m_asio.stopped())
+                                       {
+                                           m_asio.run_one();
+                                       }
                                    });
 
         LOG4CXX_INFO(logger(), "Music sensor client started")
@@ -111,13 +116,19 @@ bool MusicSensorClient<TransportT>::onDataReading(
     // Read message data
     milliseconds timestampMs{reading->timestamp()};
     const masmusic::Pitch &pitch = reading->pitch();
-    unsigned char midiNote = pitchToMidi(pitch);
-    if (reading->velocity() >= 128)
+    int8_t midiNote = pitchToMidi(pitch);
+    if (reading->instrument() > 127u)
+    {
+        LOG4CXX_WARN(logger(), "Invalid instrument value clamped to range 0-127")
+    }
+    auto instrument =
+        static_cast<int8_t>(std::min(reading->instrument(), 127u));
+    if (reading->velocity() > 127u)
     {
         LOG4CXX_WARN(logger(), "Invalid velocity value clamped to range 0-127")
     }
     auto velocity =
-        static_cast<unsigned char>(std::min(reading->velocity(), 127u));
+        static_cast<int8_t>(std::min(reading->velocity(), 127u));
 
     // Normalize expired start timestamp to now
     timestampMs = std::max(timestampMs, nowMs);
@@ -129,25 +140,30 @@ bool MusicSensorClient<TransportT>::onDataReading(
     auto onTimer =
         std::make_shared<asio::system_timer>(m_asio, timestampPointOn);
     onTimer->async_wait(
-        [this, onTimer, midiNote, velocity](const asio::error_code &)
+        [this, onTimer, instrument, midiNote, velocity](const asio::error_code &)
         {
+            InstrumentNote instrumentNote {instrument, midiNote};
             // Stop any previously playing notes
-            if (m_startedNotes[midiNote].lock())
+            if (m_startedNotes[instrumentNote].lock())
             {
+                setProgram(instrumentNote.instrument);
                 midiNoteOff(midiNote, DEFAULT_VELOCITY);
             }
             // Start note and save this timer as initiator
-            m_startedNotes[midiNote] = onTimer;
+            m_startedNotes[instrumentNote] = onTimer;
+            setProgram(instrumentNote.instrument);
             midiNoteOn(midiNote, velocity);
         });
     auto offTimer =
         std::make_shared<asio::system_timer>(m_asio, timestampPointOff);
     offTimer->async_wait(
-        [this, onTimer, offTimer, midiNote](const asio::error_code &)
+        [this, onTimer, offTimer, instrument, midiNote](const asio::error_code &)
         {
+            InstrumentNote instrumentNote {instrument, midiNote};
             // Switch off note if it was initiated by this onTimer
-            if (m_startedNotes[midiNote].lock() == onTimer)
+            if (m_startedNotes[instrumentNote].lock() == onTimer)
             {
+                setProgram(instrumentNote.instrument);
                 midiNoteOff(midiNote, DEFAULT_VELOCITY);
             }
         });
@@ -156,8 +172,8 @@ bool MusicSensorClient<TransportT>::onDataReading(
 }
 
 template <typename TransportT>
-void MusicSensorClient<TransportT>::midiNoteOn(unsigned char midiNote,
-                                               unsigned char velocity)
+void MusicSensorClient<TransportT>::midiNoteOn(int8_t midiNote,
+                                               int8_t velocity)
 {
     if (!m_started)
     {
@@ -173,8 +189,8 @@ void MusicSensorClient<TransportT>::midiNoteOn(unsigned char midiNote,
 }
 
 template <typename TransportT>
-void MusicSensorClient<TransportT>::midiNoteOff(unsigned char midiNote,
-                                                unsigned char velocity)
+void MusicSensorClient<TransportT>::midiNoteOff(int8_t midiNote,
+                                                int8_t velocity)
 {
     if (!m_started)
     {
@@ -190,6 +206,36 @@ void MusicSensorClient<TransportT>::midiNoteOff(unsigned char midiNote,
 }
 
 template <typename TransportT>
+void MusicSensorClient<TransportT>::setProgram(uint8_t program)
+{
+    if (program < 0 || program > 127)
+    {
+        throw std::runtime_error("Invalid program value");
+    }
+
+    m_midiChannel = m_programMidiChannel[program];
+    if (m_midiChannel < 0)
+    {
+        m_lastUsedMidiChannel = (m_lastUsedMidiChannel + 1 % 16);
+        if (m_lastUsedMidiChannel == 10)  // Channel 10 reserved for percussion
+        {
+            m_lastUsedMidiChannel++;
+        }
+        m_midiChannel = m_lastUsedMidiChannel;
+        m_programMidiChannel[program] = m_midiChannel;
+    }
+
+    if (m_midiChannelProgram[m_midiChannel] != program)
+    {
+        m_midiChannelProgram[m_midiChannel] = program;
+        midiSetProgram();
+    }
+
+    LOG4CXX_DEBUG(logger(), "Using program " << (int) program << " in channel "
+                                << (int) m_midiChannel)
+}
+
+template <typename TransportT>
 void MusicSensorClient<TransportT>::midiSetProgram()
 {
     if (!m_started)
@@ -197,9 +243,11 @@ void MusicSensorClient<TransportT>::midiSetProgram()
         return;
     }
 
-    LOG4CXX_DEBUG(logger(), "Set program: " << m_midiProgram)
+    auto program = m_midiChannelProgram[m_midiChannel];
+    LOG4CXX_DEBUG(logger(), "Set program: " << program);
     std::vector<unsigned char> message{
-        (unsigned char)(0xC0 | (0x0F & m_midiChannel)), m_midiProgram};
+        (unsigned char) (0xC0 | (0x0F & m_midiChannel)),
+        (unsigned char) program};
     m_midiOut.sendMessage(&message);
 }
 }

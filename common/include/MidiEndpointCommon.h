@@ -162,7 +162,7 @@ namespace midiendpoints
 //! \param pitch Pitch to convert
 //! \return Converted MIDI note value
 //!
-unsigned char pitchToMidi(const masmusic::Pitch &pitch)
+int8_t pitchToMidi(const masmusic::Pitch &pitch)
 {
     int semitoneNumber = static_cast<int>(pitch.note());
     int octave = std::min(std::max(pitch.octave(), -1), 9);
@@ -172,7 +172,7 @@ unsigned char pitchToMidi(const masmusic::Pitch &pitch)
         midiNote -= 12;
     }
 
-    return static_cast<unsigned char>(midiNote);
+    return static_cast<int8_t>(midiNote);
 }
 
 //!
@@ -181,7 +181,7 @@ unsigned char pitchToMidi(const masmusic::Pitch &pitch)
 //! \param midiNote MIDI note value
 //! \param pitch Converted pitch
 //!
-void midiToPitch(unsigned char midiNote, masmusic::Pitch *pitch)
+void midiToPitch(int8_t midiNote, masmusic::Pitch *pitch)
 {
     if ((midiNote & 0x80) != 0)
     {
@@ -198,7 +198,7 @@ void midiToPitch(unsigned char midiNote, masmusic::Pitch *pitch)
 //! \param midiNote MIDI note value
 //! \return Converted pitch
 //!
-masmusic::Pitch midiToPitch(unsigned char midiNote)
+masmusic::Pitch midiToPitch(int8_t midiNote)
 {
     masmusic::Pitch pitch;
     midiToPitch(midiNote, &pitch);

@@ -130,9 +130,9 @@ private:
     //! Reused instantaneous reading object
     TimePointNoteReading m_readingInstant;
     //! Current MIDI pitch value
-    unsigned char m_currentPitch;
+    int8_t m_currentPitch;
     //! Map to keep track of event start timestamps and velocites
-    std::unordered_map<unsigned char, Onset> m_startedNotes;
+    std::unordered_map<int8_t, Onset> m_startedNotes;
    //! Whether the retransmitter has been started
     bool m_started;
 
